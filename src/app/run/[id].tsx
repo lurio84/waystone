@@ -144,10 +144,10 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.two },
   headline: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
-  big: { fontSize: 64, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  big: { fontSize: 60, lineHeight: 66, includeFontPadding: false, fontWeight: '800' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: Spacing.two },
   cell: { width: '50%', paddingVertical: Spacing.two, gap: Spacing.half },
-  cellValue: { fontSize: 24, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  cellValue: { fontSize: 24, lineHeight: 30, includeFontPadding: false, fontWeight: '700' },
   sectionTitle: { marginTop: Spacing.three },
   split: {
     flexDirection: 'row',

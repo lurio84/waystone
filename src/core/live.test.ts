@@ -17,6 +17,14 @@ describe('currentPaceSPerKm', () => {
     expect(currentPaceSPerKm(pts, 20)).toBe(0);
   });
 
+  it('el baile del GPS estando parado no genera ritmo actual', () => {
+    const pts = synthWalk([
+      { seconds: 30, speedMs: 3 },
+      { seconds: 30, speedMs: 0, jitterM: 6 },
+    ]);
+    expect(currentPaceSPerKm(pts, 20)).toBe(0);
+  });
+
   it('refleja un cambio de ritmo reciente, no el promedio de toda la carrera', () => {
     const pts = synthWalk([
       { seconds: 120, speedMs: 2 }, // lento un rato largo

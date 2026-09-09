@@ -13,7 +13,11 @@ export interface WalkSegment {
   reportSpeed?: boolean;
   /** ganancia de altitud lineal en el tramo (m); por defecto 0 */
   elevM?: number;
+  /** amplitud de deriva de GPS por punto (m); simula el baile estando parado */
+  jitterM?: number;
 }
+
+const M_PER_DEG_LON_37 = 88_800; // aprox a 37° de latitud
 
 /**
  * Genera una secuencia de puntos GPS sintéticos avanzando en línea recta
@@ -34,19 +38,25 @@ export function synthWalk(
     { ts, lat, lon, altitude: alt, accuracy: 5, speed: 0 },
   ];
 
+  let n = 0;
   for (const seg of segments) {
     const accuracy = seg.accuracy ?? 5;
     const reportSpeed = seg.reportSpeed ?? true;
     const elevStep = (seg.elevM ?? 0) / seg.seconds;
+    const jitter = seg.jitterM ?? 0;
 
     for (let s = 0; s < seg.seconds; s++) {
       ts += 1000;
       lat += seg.speedMs / M_PER_DEG_LAT;
       alt += elevStep;
+      n += 1;
+      // deriva determinista: dos sinusoides desfasadas, media cero
+      const jLat = jitter ? (Math.sin(n * 1.7) * jitter) / M_PER_DEG_LAT : 0;
+      const jLon = jitter ? (Math.cos(n * 2.3) * jitter) / M_PER_DEG_LON_37 : 0;
       points.push({
         ts,
-        lat,
-        lon,
+        lat: lat + jLat,
+        lon: lon + jLon,
         altitude: alt,
         accuracy,
         speed: reportSpeed ? seg.speedMs : null,

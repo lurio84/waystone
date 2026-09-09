@@ -68,10 +68,12 @@ export default function RecordScreen() {
         )}
 
         <View style={styles.main}>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
-            DISTANCIA · KM
-          </ThemedText>
-          <ThemedText style={styles.distance}>{formatKm(metrics.distanceM)}</ThemedText>
+          <View style={styles.distanceBlock}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
+              DISTANCIA · KM
+            </ThemedText>
+            <ThemedText style={styles.distance}>{formatKm(metrics.distanceM)}</ThemedText>
+          </View>
 
           <View style={styles.pair}>
             <Metric label="TIEMPO" value={formatDuration(elapsedS)} />
@@ -117,17 +119,29 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   banner: { paddingVertical: Spacing.two, alignItems: 'center' },
   bannerText: { fontSize: 16, fontWeight: '800', letterSpacing: 1 },
-  main: { flex: 1, justifyContent: 'center', paddingHorizontal: Spacing.three, gap: Spacing.three },
+  main: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    gap: Spacing.five,
+  },
   label: { letterSpacing: 1.5, textAlign: 'center' },
+  distanceBlock: { alignItems: 'center', gap: Spacing.one },
   distance: {
-    fontSize: 96,
+    fontSize: 92,
+    lineHeight: 100,
+    includeFontPadding: false,
     fontWeight: '800',
     textAlign: 'center',
-    fontVariant: ['tabular-nums'],
   },
   pair: { flexDirection: 'row' },
   metric: { flex: 1, alignItems: 'center', gap: Spacing.one },
-  metricValue: { fontSize: 40, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  metricValue: {
+    fontSize: 38,
+    lineHeight: 44,
+    includeFontPadding: false,
+    fontWeight: '700',
+  },
   actions: { flexDirection: 'row', gap: Spacing.two, padding: Spacing.three },
   btn: { flex: 1, borderRadius: Spacing.four, paddingVertical: Spacing.four, alignItems: 'center' },
   btnText: { fontSize: 20, fontWeight: '700' },

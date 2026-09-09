@@ -90,6 +90,35 @@ describe('computeMetrics', () => {
       elevGainM: 0,
     });
   });
+
+  it('estar parado con el GPS bailando NO suma distancia ni ritmo', () => {
+    // 90 s inmóvil, pero cada punto se mueve ±8 m por deriva del GPS
+    const pts = synthWalk([{ seconds: 90, speedMs: 0, jitterM: 8 }]);
+    const m = computeMetrics(pts, []);
+    expect(m.distanceM).toBeLessThan(50);
+    expect(m.avgPaceSPerKm).toBe(0); // por debajo de MIN_PACE_DISTANCE_M
+  });
+
+  it('la deriva del GPS durante una parada larga no infla la distancia', () => {
+    const pts = synthWalk([
+      { seconds: 120, speedMs: 3 }, // 360 m corriendo
+      { seconds: 120, speedMs: 0, jitterM: 10 }, // parado, GPS bailando fuerte
+      { seconds: 120, speedMs: 3 }, // otros 360 m
+    ]);
+    const m = computeMetrics(pts, []);
+    expect(m.distanceM).toBeGreaterThan(690);
+    expect(m.distanceM).toBeLessThan(770);
+    // ritmo coherente con ~240 s en movimiento sobre ~720 m
+    expect(m.avgPaceSPerKm).toBeGreaterThan(300);
+    expect(m.avgPaceSPerKm).toBeLessThan(370);
+  });
+
+  it('no da ritmo por debajo de 50 m (ruido, no zancada)', () => {
+    const pts = synthWalk([{ seconds: 12, speedMs: 3 }]); // ~36 m
+    const m = computeMetrics(pts, []);
+    expect(m.distanceM).toBeLessThan(50);
+    expect(m.avgPaceSPerKm).toBe(0);
+  });
 });
 
 describe('computeSplits', () => {

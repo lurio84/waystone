@@ -1,11 +1,37 @@
 import { autoPauseIntervals, AutoPauseOptions, DEFAULT_AUTOPAUSE } from './autopause';
-import {
-  elevationGainMeters,
-  filterPoints,
-  haversineMeters,
-  pathDistanceMeters,
-} from './geo';
+import { elevationGainMeters, filterPoints, haversineMeters } from './geo';
 import type { Interval, RawPoint, RunEvent, RunMetrics, Split } from './types';
+
+/**
+ * Distancia mínima (m) por debajo de la cual no se calcula ritmo: con menos
+ * que esto lo que hay es ruido de GPS, y un ritmo sacado de ruido engaña más
+ * que un guión.
+ */
+export const MIN_PACE_DISTANCE_M = 50;
+
+function tsInAnyInterval(ts: number, intervals: Interval[]): boolean {
+  for (const iv of intervals) {
+    if (ts >= iv.start && ts <= iv.end) return true;
+  }
+  return false;
+}
+
+/**
+ * Distancia recorrida EN MOVIMIENTO: suma los tramos entre puntos consecutivos
+ * salvo los que caen dentro de una pausa (manual o automática). Estando parado
+ * el GPS deriva metros; sin este filtro esa deriva se cuenta como distancia y
+ * dispara el ritmo a valores imposibles.
+ */
+export function movingDistanceMeters(points: RawPoint[], pauses: Interval[]): number {
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (tsInAnyInterval(a.ts, pauses) || tsInAnyInterval(b.ts, pauses)) continue;
+    total += haversineMeters(a, b);
+  }
+  return total;
+}
 
 /** Empareja los eventos manuales pause/resume en intervalos cerrados. */
 export function manualPauseIntervals(events: RunEvent[], runEndTs: number): Interval[] {
@@ -95,15 +121,16 @@ export function computeMetrics(
   const elapsedMs = endTs - startTs;
 
   const filtered = filterPoints(points);
-  const distanceM = pathDistanceMeters(filtered);
+  const pauses = allPauses(points, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
+
+  const distanceM = movingDistanceMeters(filtered, pauses);
   const elevGainM = elevationGainMeters(filtered);
 
-  const pauses = allPauses(points, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
   const pausedMs = pausedMsWithin(pauses, startTs, endTs);
   const movingMs = Math.max(0, elapsedMs - pausedMs);
 
   const avgPaceSPerKm =
-    distanceM > 0 ? movingMs / 1000 / (distanceM / 1000) : 0;
+    distanceM >= MIN_PACE_DISTANCE_M ? movingMs / 1000 / (distanceM / 1000) : 0;
 
   return {
     distanceM,
@@ -155,7 +182,9 @@ export function computeSplits(
   for (let i = 1; i < filtered.length; i++) {
     const a = filtered[i - 1];
     const b = filtered[i];
-    const segLen = haversineMeters(a, b);
+    // los tramos dentro de una pausa no cuentan distancia (misma regla que las métricas)
+    const paused = tsInAnyInterval(a.ts, pauses) || tsInAnyInterval(b.ts, pauses);
+    const segLen = paused ? 0 : haversineMeters(a, b);
 
     // desnivel dentro del tramo actual
     if (b.altitude != null) {
@@ -186,9 +215,9 @@ export function computeSplits(
     cumDist += segLen;
   }
 
-  // resto final (parcial incompleto)
+  // resto final (parcial incompleto); se ignora si es un residuo de pocos metros
   const tail = cumDist - (nextMark - splitMeters);
-  if (tail > 1) {
+  if (tail >= 20) {
     pushSplit(filtered[filtered.length - 1].ts, tail, splits.length);
   }
 

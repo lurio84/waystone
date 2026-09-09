@@ -1,13 +1,15 @@
 import { autoPauseIntervals, AutoPauseOptions, DEFAULT_AUTOPAUSE } from './autopause';
-import { filterPoints, pathDistanceMeters } from './geo';
+import { filterPoints, haversineMeters } from './geo';
 import type { RawPoint } from './types';
 
 /**
- * Ritmo "actual" suavizado: metros recorridos en la última ventana de tiempo
- * dividido por esa ventana. Sin suavizado el número baila con cada punto y no
- * sirve para nada mirándolo mientras corres.
+ * Ritmo "actual" suavizado sobre la última ventana de tiempo. Usa el
+ * DESPLAZAMIENTO (línea recta entre el primer y el último punto de la ventana),
+ * no la longitud del recorrido: sumando tramo a tramo, el baile del GPS
+ * estando quieto acumula decenas de metros falsos y dispara el número. El
+ * desplazamiento se anula solo con el ruido.
  *
- * Devuelve segundos por km, o 0 si no hay movimiento apreciable.
+ * Devuelve segundos por km, o 0 si no hay avance apreciable.
  */
 export function currentPaceSPerKm(points: RawPoint[], windowS = 20): number {
   if (points.length < 2) return 0;
@@ -19,11 +21,12 @@ export function currentPaceSPerKm(points: RawPoint[], windowS = 20): number {
   const window = filtered.filter((p) => p.ts >= cutoff);
   if (window.length < 2) return 0;
 
-  const dist = pathDistanceMeters(window);
+  const displacement = haversineMeters(window[0], window[window.length - 1]);
   const dtS = (window[window.length - 1].ts - window[0].ts) / 1000;
-  if (dist < 1 || dtS <= 0) return 0;
+  // por debajo de ~10 m de avance en la ventana es ruido, no zancada
+  if (displacement < 10 || dtS <= 0) return 0;
 
-  return dtS / (dist / 1000);
+  return dtS / (displacement / 1000);
 }
 
 /**
