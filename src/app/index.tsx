@@ -95,7 +95,12 @@ export default function HomeScreen() {
           </Pressable>
 
           <View style={styles.listHeader}>
-            <ThemedText type="inscription" themeColor="textSecondary" style={styles.sectionLabel}>
+            <ThemedText
+              type="inscription"
+              themeColor="textSecondary"
+              numberOfLines={1}
+              style={styles.sectionLabel}
+            >
               Historial
             </ThemedText>
             <View style={styles.headerLinks}>
@@ -161,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaText: { fontSize: 17, letterSpacing: 3 },
-  sectionLabel: { fontSize: 13, letterSpacing: 3 },
+  sectionLabel: { fontSize: 13, letterSpacing: 2, flexShrink: 0 },
   devLink: { textAlign: 'center', marginTop: Spacing.four },
   headerLinks: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
   listHeader: {
