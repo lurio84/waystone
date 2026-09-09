@@ -75,13 +75,15 @@ export default function RecordScreen() {
             <ThemedText style={styles.distance}>{formatKm(metrics.distanceM)}</ThemedText>
           </View>
 
-          <View style={styles.pair}>
-            <Metric label="TIEMPO" value={formatDuration(elapsedS)} />
-            <Metric label="RITMO · /KM" value={formatPace(metrics.currentPaceSPerKm)} />
-          </View>
-          <View style={styles.pair}>
-            <Metric label="EN MOVIMIENTO" value={formatDuration(metrics.movingTimeS)} />
-            <Metric label="RITMO MEDIO" value={formatPace(metrics.avgPaceSPerKm)} />
+          <View style={styles.metricsGroup}>
+            <View style={styles.pair}>
+              <Metric label="TIEMPO" value={formatDuration(elapsedS)} />
+              <Metric label="RITMO · /KM" value={formatPace(metrics.currentPaceSPerKm)} />
+            </View>
+            <View style={styles.pair}>
+              <Metric label="EN MOVIMIENTO" value={formatDuration(metrics.movingTimeS)} />
+              <Metric label="RITMO MEDIO" value={formatPace(metrics.avgPaceSPerKm)} />
+            </View>
           </View>
         </View>
 
@@ -121,12 +123,13 @@ const styles = StyleSheet.create({
   bannerText: { fontSize: 16, fontWeight: '800', letterSpacing: 1 },
   main: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: Spacing.three,
-    gap: Spacing.five,
+    paddingTop: Spacing.six,
+    gap: Spacing.six,
   },
   label: { letterSpacing: 1.5, textAlign: 'center' },
-  distanceBlock: { alignItems: 'center', gap: Spacing.one },
+  distanceBlock: { alignItems: 'center', gap: Spacing.two },
   distance: {
     fontSize: 92,
     lineHeight: 100,
@@ -134,6 +137,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
+  metricsGroup: { gap: Spacing.four },
   pair: { flexDirection: 'row' },
   metric: { flex: 1, alignItems: 'center', gap: Spacing.one },
   metricValue: {
