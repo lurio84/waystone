@@ -84,11 +84,20 @@ export default function HomeScreen() {
 
           <View style={styles.listHeader}>
             <ThemedText type="subtitle">Historial</ThemedText>
-            {runs.length > 0 && (
-              <ThemedText type="link" themeColor="primary" onPress={() => router.push('/runs')}>
-                Ver todo
+            <View style={styles.headerLinks}>
+              {runs.length > 0 && (
+                <ThemedText type="link" themeColor="primary" onPress={() => router.push('/runs')}>
+                  Ver todo
+                </ThemedText>
+              )}
+              <ThemedText
+                type="link"
+                themeColor="textSecondary"
+                onPress={() => router.push('/settings')}
+              >
+                Ajustes
               </ThemedText>
-            )}
+            </View>
           </View>
 
           {runs.length === 0 ? (
@@ -114,6 +123,17 @@ export default function HomeScreen() {
               </Pressable>
             ))
           )}
+
+          {__DEV__ && (
+            <ThemedText
+              type="link"
+              themeColor="textSecondary"
+              onPress={() => router.push('/dev-sim')}
+              style={styles.devLink}
+            >
+              · simulador
+            </ThemedText>
+          )}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
@@ -130,6 +150,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaText: { fontSize: 22, fontWeight: '700' },
+  devLink: { textAlign: 'center', marginTop: Spacing.four },
+  headerLinks: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
   listHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

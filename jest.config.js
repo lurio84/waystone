@@ -5,7 +5,8 @@
  */
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/src/core/**/*.test.ts'],
+  testMatch: ['<rootDir>/src/core/**/*.test.ts', '<rootDir>/src/dev/**/*.test.ts'],
+  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
   transform: {
     '^.+\\.[jt]sx?$': ['babel-jest', { caller: { platform: 'node' } }],
   },

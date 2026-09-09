@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, AppState, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RouteMap } from '@/components/route-map';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -12,6 +13,7 @@ import { useLiveMetrics } from '@/hooks/use-live-metrics';
 import { useTheme } from '@/hooks/use-theme';
 import { ensureTracking, pause, resume, stopRecording } from '@/tracking/recorder';
 import { useSession } from '@/store/session';
+import { useSettings } from '@/store/settings';
 
 /** Cada cuánto el watchdog comprueba que el GPS sigue entregando puntos. */
 const WATCHDOG_MS = 15_000;
@@ -22,6 +24,7 @@ export default function RecordScreen() {
   const router = useRouter();
   const session = useSession();
   const metrics = useLiveMetrics(session.runId);
+  const liveMap = useSettings((s) => s.liveMap);
 
   // Cronómetro de pared, independiente del muestreo del GPS.
   const [nowTs, setNowTs] = useState(() => Date.now());
@@ -86,6 +89,10 @@ export default function RecordScreen() {
           </View>
         )}
 
+        {liveMap && metrics.points.length >= 2 && (
+          <RouteMap points={metrics.points} follow style={styles.map} />
+        )}
+
         <View style={styles.main}>
           <View style={styles.distanceBlock}>
             <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
@@ -140,12 +147,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   banner: { paddingVertical: Spacing.two, alignItems: 'center' },
   bannerText: { fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  map: { height: '34%' },
   main: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.six,
-    gap: Spacing.six,
+    gap: Spacing.five,
   },
   label: { letterSpacing: 1.5, textAlign: 'center' },
   distanceBlock: { alignItems: 'center', gap: Spacing.two },

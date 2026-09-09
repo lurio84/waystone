@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { filterPoints } from '@/core/geo';
 import { currentPaceSPerKm, isAutoPausedNow } from '@/core/live';
 import { computeMetrics } from '@/core/metrics';
+import type { RawPoint } from '@/core/types';
 import { getEvents, getPoints } from '@/db/runs';
 
 export interface LiveMetrics {
@@ -10,6 +12,8 @@ export interface LiveMetrics {
   avgPaceSPerKm: number;
   currentPaceSPerKm: number;
   autoPaused: boolean;
+  /** puntos filtrados, para dibujar la ruta en el mini-mapa */
+  points: RawPoint[];
 }
 
 const EMPTY: LiveMetrics = {
@@ -19,6 +23,7 @@ const EMPTY: LiveMetrics = {
   avgPaceSPerKm: 0,
   currentPaceSPerKm: 0,
   autoPaused: false,
+  points: [],
 };
 
 /**
@@ -48,6 +53,7 @@ export function useLiveMetrics(runId: number | null, intervalMs = 2000): LiveMet
         ...base,
         currentPaceSPerKm: currentPaceSPerKm(points),
         autoPaused: isAutoPausedNow(points),
+        points: filterPoints(points),
       });
     };
 

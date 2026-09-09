@@ -3,11 +3,13 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RouteMap } from '@/components/route-map';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { filterPoints } from '@/core/geo';
 import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
-import { deleteRun, getRun, getSplits } from '@/db/runs';
+import { deleteRun, getPoints, getRun, getSplits } from '@/db/runs';
 import { useTheme } from '@/hooks/use-theme';
 import { exportRunGpx, exportRunJson } from '@/export/export-run';
 
@@ -20,6 +22,7 @@ export default function RunDetailScreen() {
 
   const run = useMemo(() => getRun(runId), [runId]);
   const splits = useMemo(() => getSplits(runId), [runId]);
+  const routePoints = useMemo(() => filterPoints(getPoints(runId)), [runId]);
 
   if (!run) {
     return (
@@ -61,6 +64,10 @@ export default function RunDetailScreen() {
           <ThemedText type="small" themeColor="textSecondary">
             {formatDateTime(run.startedAt)}
           </ThemedText>
+
+          {routePoints.length >= 2 && (
+            <RouteMap points={routePoints} style={styles.map} />
+          )}
 
           <View style={styles.headline}>
             <ThemedText style={styles.big}>{formatKm(run.distanceM)}</ThemedText>
@@ -143,6 +150,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.two },
+  map: { height: 260, borderRadius: Spacing.three, marginVertical: Spacing.two },
   headline: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
   big: { fontSize: 60, lineHeight: 66, includeFontPadding: false, fontWeight: '800' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: Spacing.two },

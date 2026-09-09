@@ -2,7 +2,7 @@ import { haversineMeters } from '@/core/geo';
 
 /**
  * Rutas sintéticas para el simulador (`src/dev/simulator.ts`). Coordenadas
- * reales de Sevilla. Solo se cargan en desarrollo / modo demo.
+ * aproximadas de Sevilla. Solo se cargan en desarrollo / modo demo.
  */
 
 export interface Waypoint {
@@ -39,63 +39,64 @@ export function routeLengthMeters(r: RouteScenario): number {
   return d;
 }
 
-// --- Parque de María Luisa: bucle ~2,7 km ---
+// --- Parque de María Luisa + Avenida de la Palmera: bucle ~3 km ---
 const parkLoop: RouteScenario = {
   id: 'park-loop',
-  name: 'Parque de María Luisa',
-  description: 'Bucle ~2,7 km, ritmo cómodo, un semáforo de 40 s a mitad.',
+  name: 'María Luisa y la Palmera',
+  description: 'Bucle ~3 km, ritmo cómodo, un semáforo de 40 s a mitad.',
   paceSPerKm: 330, // 5:30 /km
   jitterM: 3,
   waypoints: [
-    { lat: 37.37752, lon: -5.98693 }, // Plaza de España
-    { lat: 37.37606, lon: -5.98842 },
-    { lat: 37.37464, lon: -5.98795 },
-    { lat: 37.37409, lon: -5.98965 }, // Glorieta sur
-    { lat: 37.37512, lon: -5.99087 },
-    { lat: 37.37665, lon: -5.99012 },
-    { lat: 37.37772, lon: -5.98878 },
-    { lat: 37.37806, lon: -5.98717 },
-    { lat: 37.37752, lon: -5.98693 }, // cierra el bucle
+    { lat: 37.3776, lon: -5.9868 }, // Plaza de España
+    { lat: 37.3742, lon: -5.9876 },
+    { lat: 37.3705, lon: -5.9884 },
+    { lat: 37.3668, lon: -5.9892 }, // baja por la Palmera
+    { lat: 37.3654, lon: -5.9863 },
+    { lat: 37.3689, lon: -5.9847 },
+    { lat: 37.3726, lon: -5.9846 },
+    { lat: 37.3763, lon: -5.9850 }, // sube de vuelta
+    { lat: 37.3781, lon: -5.9861 },
+    { lat: 37.3776, lon: -5.9868 }, // cierra el bucle
   ],
-  events: [{ atM: 1300, kind: 'stop', seconds: 40 }],
+  events: [{ atM: 1500, kind: 'stop', seconds: 40 }],
 };
 
 // --- Río Guadalquivir: ida y vuelta ~5 km ---
 const riverRun: RouteScenario = {
   id: 'river-run',
-  name: 'Río — Torre del Oro',
+  name: 'Río — Torre del Oro a la Barqueta',
   description: 'Ida y vuelta ~5 km por el río. Túnel bajo un puente y un pico de imprecisión.',
   paceSPerKm: 300, // 5:00 /km
   jitterM: 4,
   waypoints: [
-    { lat: 37.38227, lon: -5.99633 }, // Torre del Oro
-    { lat: 37.38556, lon: -5.99686 },
-    { lat: 37.38921, lon: -5.99725 }, // Puente de Triana
-    { lat: 37.39264, lon: -5.99804 },
-    { lat: 37.39643, lon: -6.00019 },
-    { lat: 37.39264, lon: -5.99804 }, // vuelta
-    { lat: 37.38921, lon: -5.99725 },
-    { lat: 37.38556, lon: -5.99686 },
-    { lat: 37.38227, lon: -5.99633 },
+    { lat: 37.3823, lon: -5.9963 }, // Torre del Oro
+    { lat: 37.3868, lon: -5.9971 },
+    { lat: 37.3912, lon: -5.9979 }, // Puente de Triana
+    { lat: 37.3968, lon: -5.9985 },
+    { lat: 37.4032, lon: -5.9992 }, // Puente de la Barqueta
+    { lat: 37.3968, lon: -5.9985 }, // vuelta
+    { lat: 37.3912, lon: -5.9979 },
+    { lat: 37.3868, lon: -5.9971 },
+    { lat: 37.3823, lon: -5.9963 },
   ],
   events: [
-    { atM: 900, kind: 'gap', seconds: 25 }, // bajo el Puente de Triana
-    { atM: 2600, kind: 'accuracy', accuracyM: 40, seconds: 30 },
+    { atM: 1000, kind: 'gap', seconds: 25 }, // bajo el Puente de Triana
+    { atM: 2800, kind: 'accuracy', accuracyM: 40, seconds: 30 },
   ],
 };
 
-// --- Ruta corta para iterar rápido ---
+// --- Ruta corta para iterar rápido ~800 m ---
 const quickTest: RouteScenario = {
   id: 'quick',
-  name: 'Test rápido (~450 m)',
+  name: 'Test rápido (~800 m)',
   description: 'Corta, para probar cambios deprisa. Sin eventos.',
   paceSPerKm: 300,
   jitterM: 2,
   waypoints: [
-    { lat: 37.3775, lon: -5.9869 },
-    { lat: 37.3773, lon: -5.9889 },
-    { lat: 37.3763, lon: -5.9890 },
-    { lat: 37.3762, lon: -5.9870 },
+    { lat: 37.3776, lon: -5.9868 },
+    { lat: 37.3742, lon: -5.9876 },
+    { lat: 37.3735, lon: -5.9845 },
+    { lat: 37.3769, lon: -5.9838 },
   ],
   events: [],
 };
