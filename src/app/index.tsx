@@ -16,7 +16,7 @@ import { useSession } from '@/store/session';
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const session = useSession();
+  const beginSession = useSession((s) => s.begin);
   const [runs, setRuns] = useState<RunRow[]>([]);
   const [hasActive, setHasActive] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -26,10 +26,10 @@ export default function HomeScreen() {
       setRuns(listRuns(5));
       const active = getActiveRun();
       setHasActive(!!active);
-      if (active && session.runId == null) {
-        session.begin(active.id, active.startedAt);
+      if (active && useSession.getState().runId == null) {
+        beginSession(active.id, active.startedAt);
       }
-    }, [session]),
+    }, [beginSession]),
   );
 
   const onStart = async () => {
@@ -51,7 +51,7 @@ export default function HomeScreen() {
       }
       const runId = await startRecording();
       const active = getActiveRun();
-      session.begin(runId, active?.startedAt ?? Date.now());
+      beginSession(runId, active?.startedAt ?? Date.now());
       router.push('/record');
     } finally {
       setStarting(false);

@@ -136,7 +136,6 @@ export function computeSplits(
   let cumDist = 0;
   let nextMark = splitMeters;
   let segStartTs = filtered[0].ts;
-  let segStartAlt = filtered[0].altitude;
   let segElevRef = filtered[0].altitude;
   let segElevGain = 0;
 

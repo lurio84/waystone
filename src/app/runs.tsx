@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,12 +8,15 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
 import { listRuns } from '@/db/runs';
+import type { RunRow } from '@/db/schema';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function RunsScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const runs = listRuns(500);
+  const [runs, setRuns] = useState<RunRow[]>([]);
+
+  useFocusEffect(useCallback(() => setRuns(listRuns(500)), []));
 
   return (
     <ThemedView style={styles.container}>

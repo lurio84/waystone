@@ -21,7 +21,7 @@ export default function RecordScreen() {
   const metrics = useLiveMetrics(session.runId);
 
   // Cronómetro de pared, independiente del muestreo del GPS.
-  const [nowTs, setNowTs] = useState(Date.now());
+  const [nowTs, setNowTs] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowTs(Date.now()), 1000);
     return () => clearInterval(id);
