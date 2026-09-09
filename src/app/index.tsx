@@ -63,7 +63,18 @@ export default function HomeScreen() {
     }
   };
 
-  const onResume = () => router.push('/record');
+  const onResume = async () => {
+    setStarting(true);
+    try {
+      // Reengancha el GPS: si Android mató el servicio (doze, OEM), esto lo
+      // relanza desde un contexto en primer plano, donde SÍ se puede arrancar
+      // un foreground service. startRecording no crea otra carrera si ya hay una activa.
+      await startRecording();
+      router.push('/record');
+    } finally {
+      setStarting(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
