@@ -76,6 +76,18 @@ export function getPoints(runId: number): RawPoint[] {
     .map(pointRowToRaw);
 }
 
+/** Timestamp del último punto de una carrera, o null si no tiene ninguno. */
+export function getLastPointTs(runId: number): number | null {
+  const row = getDb()
+    .select({ ts: points.ts })
+    .from(points)
+    .where(eq(points.runId, runId))
+    .orderBy(desc(points.ts))
+    .limit(1)
+    .get();
+  return row?.ts ?? null;
+}
+
 export function getEvents(runId: number): RunEvent[] {
   return getDb()
     .select({ ts: runEvents.ts, kind: runEvents.kind })
@@ -158,10 +170,19 @@ export function deleteRun(runId: number): void {
   db.delete(runs).where(eq(runs.id, runId)).run();
 }
 
-/** Descarta una carrera activa sin puntos (start accidental). */
+/**
+ * Descarta una carrera activa que lleva un rato sin recibir NI UN punto
+ * (start accidental, o el permiso de ubicación denegado). El margen de tiempo
+ * es crítico: una carrera recién creada tiene 0 puntos durante los primeros
+ * segundos hasta que el GPS entrega el primer fix — borrarla ahí mata la
+ * carrera nada más empezar.
+ */
+const EMPTY_RUN_GRACE_MS = 90_000;
+
 export function discardEmptyActiveRun(): void {
   const active = getActiveRun();
   if (!active) return;
+  if (Date.now() - active.startedAt < EMPTY_RUN_GRACE_MS) return;
   const n = getDb().select().from(points).where(eq(points.runId, active.id)).all().length;
   if (n === 0) deleteRun(active.id);
 }

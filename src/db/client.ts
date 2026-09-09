@@ -2,6 +2,8 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync, type SQLiteDatabase } from 'expo-sqlite';
 import * as schema from './schema';
 
+// NO renombrar este fichero aunque cambie el nombre del proyecto: cambiarlo
+// huérfana la BD que ya existe en el móvil (carreras perdidas). Es interno.
 const DB_NAME = 'zancada.db';
 
 /** Versión del esquema. Subir al añadir una migración en `SCHEMA_SQL`. */

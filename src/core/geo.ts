@@ -56,6 +56,41 @@ export function filterPoints(points: RawPoint[]): RawPoint[] {
   return kept;
 }
 
+/** Rumbo inicial (radianes, 0 = norte) del punto a al b. */
+export function bearingRad(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+): number {
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  return Math.atan2(y, x);
+}
+
+/** Punto a `distM` metros de `from` siguiendo `bearing` (radianes). */
+export function destPoint(
+  from: { lat: number; lon: number },
+  bearing: number,
+  distM: number,
+): { lat: number; lon: number } {
+  const d = distM / EARTH_RADIUS_M;
+  const lat1 = toRad(from.lat);
+  const lon1 = toRad(from.lon);
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(bearing),
+  );
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(d) * Math.cos(lat1),
+      Math.cos(d) - Math.sin(lat1) * Math.sin(lat2),
+    );
+  return { lat: (lat2 * 180) / Math.PI, lon: (lon2 * 180) / Math.PI };
+}
+
 /** Distancia total (m) recorrida por una secuencia YA filtrada de puntos. */
 export function pathDistanceMeters(points: RawPoint[]): number {
   let total = 0;

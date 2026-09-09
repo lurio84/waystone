@@ -1,7 +1,7 @@
 import { useKeepAwake } from 'expo-keep-awake';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -10,8 +10,11 @@ import { Spacing } from '@/constants/theme';
 import { formatDuration, formatKm, formatPace } from '@/core/format';
 import { useLiveMetrics } from '@/hooks/use-live-metrics';
 import { useTheme } from '@/hooks/use-theme';
-import { pause, resume, stopRecording } from '@/tracking/recorder';
+import { ensureTracking, pause, resume, stopRecording } from '@/tracking/recorder';
 import { useSession } from '@/store/session';
+
+/** Cada cuánto el watchdog comprueba que el GPS sigue entregando puntos. */
+const WATCHDOG_MS = 15_000;
 
 export default function RecordScreen() {
   useKeepAwake();
@@ -25,6 +28,22 @@ export default function RecordScreen() {
   useEffect(() => {
     const id = setInterval(() => setNowTs(Date.now()), 1000);
     return () => clearInterval(id);
+  }, []);
+
+  // Watchdog: si el GPS deja de entregar puntos (doze, kill del OEM, bug de
+  // expo-location), reengancha las actualizaciones. También al volver a primer plano.
+  useEffect(() => {
+    const check = () => {
+      ensureTracking().catch(() => {});
+    };
+    const id = setInterval(check, WATCHDOG_MS);
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') check();
+    });
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
   }, []);
 
   const elapsedS = session.startedAt ? (nowTs - session.startedAt) / 1000 : 0;
