@@ -101,12 +101,7 @@ export default function HomeScreen() {
           </Pressable>
 
           <View style={styles.listHeader}>
-            <ThemedText
-              type="inscription"
-              themeColor="textSecondary"
-              numberOfLines={1}
-              style={styles.sectionLabel}
-            >
+            <ThemedText type="inscription" themeColor="textSecondary" style={styles.sectionLabel}>
               Historial
             </ThemedText>
             <View style={styles.headerLinks}>
@@ -173,13 +168,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ctaText: { fontSize: 17, letterSpacing: 2, textAlign: 'center' },
-  sectionLabel: { fontSize: 13, letterSpacing: 2, flexShrink: 0 },
+  // flex:1 + paddingRight: la letra final no se recorta por el letterSpacing de cola (bug Android)
+  sectionLabel: { flex: 1, fontSize: 13, letterSpacing: 2, paddingRight: Spacing.two },
   devLink: { textAlign: 'center', marginTop: Spacing.four },
   headerLinks: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
   listHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'baseline',
     marginTop: Spacing.two,
   },
   row: {
