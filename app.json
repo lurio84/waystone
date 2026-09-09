@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Zancada",
+    "name": "Waystone",
     "slug": "Zancada",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "zancada",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "platforms": [
       "android",
       "ios"
@@ -17,7 +17,7 @@
     "android": {
       "package": "com.lurio.zancada",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#161B1E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -44,7 +44,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#161B1E",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
@@ -54,8 +54,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Zancada usa tu ubicación para grabar el recorrido y las métricas de la carrera, también con la pantalla apagada.",
-          "locationWhenInUsePermission": "Zancada usa tu ubicación para grabar el recorrido y las métricas de la carrera.",
+          "locationAlwaysAndWhenInUsePermission": "Waystone usa tu ubicación para grabar el recorrido y las métricas de la carrera, también con la pantalla apagada.",
+          "locationWhenInUsePermission": "Waystone usa tu ubicación para grabar el recorrido y las métricas de la carrera.",
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }

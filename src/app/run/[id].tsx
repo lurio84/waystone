@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RouteMap } from '@/components/route-map';
+import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -61,7 +62,7 @@ export default function RunDetailScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="inscription" themeColor="textSecondary">
             {formatDateTime(run.startedAt)}
           </ThemedText>
 
@@ -69,21 +70,23 @@ export default function RunDetailScreen() {
             <RouteMap points={routePoints} style={styles.map} />
           )}
 
-          <View style={styles.headline}>
-            <ThemedText style={styles.big}>{formatKm(run.distanceM)}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              KM
-            </ThemedText>
-          </View>
+          <StonePanel style={styles.summary}>
+            <View style={styles.headline}>
+              <ThemedText style={styles.big}>{formatKm(run.distanceM)}</ThemedText>
+              <ThemedText type="inscription" themeColor="textSecondary" style={styles.unit}>
+                km
+              </ThemedText>
+            </View>
 
-          <View style={styles.grid}>
-            <Cell label="En movimiento" value={formatDuration(run.movingTimeS)} />
-            <Cell label="Tiempo total" value={formatDuration(run.elapsedTimeS)} />
-            <Cell label="Ritmo medio" value={`${formatPace(run.avgPaceSPerKm)} /km`} />
-            <Cell label="Desnivel +" value={`${Math.round(run.elevGainM)} m`} />
-          </View>
+            <View style={styles.grid}>
+              <Cell label="En movimiento" value={formatDuration(run.movingTimeS)} />
+              <Cell label="Tiempo total" value={formatDuration(run.elapsedTimeS)} />
+              <Cell label="Ritmo medio" value={`${formatPace(run.avgPaceSPerKm)} /km`} />
+              <Cell label="Desnivel +" value={`${Math.round(run.elevGainM)} m`} />
+            </View>
+          </StonePanel>
 
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
+          <ThemedText type="inscription" themeColor="textSecondary" style={styles.sectionTitle}>
             Parciales
           </ThemedText>
           {splits.length === 0 ? (
@@ -111,16 +114,16 @@ export default function RunDetailScreen() {
             <Pressable
               disabled={busy}
               onPress={withBusy(() => exportRunGpx(runId))}
-              style={[styles.exportBtn, { backgroundColor: theme.backgroundElement }]}
+              style={[styles.exportBtn, { backgroundColor: theme.backgroundSelected }]}
             >
-              <ThemedText type="smallBold">Exportar GPX</ThemedText>
+              <ThemedText type="inscription" style={styles.exportLabel}>Exportar GPX</ThemedText>
             </Pressable>
             <Pressable
               disabled={busy}
               onPress={withBusy(() => exportRunJson(runId))}
-              style={[styles.exportBtn, { backgroundColor: theme.backgroundElement }]}
+              style={[styles.exportBtn, { backgroundColor: theme.backgroundSelected }]}
             >
-              <ThemedText type="smallBold">Exportar JSON</ThemedText>
+              <ThemedText type="inscription" style={styles.exportLabel}>Exportar JSON</ThemedText>
             </Pressable>
           </View>
 
@@ -138,7 +141,7 @@ export default function RunDetailScreen() {
 function Cell({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.cell}>
-      <ThemedText type="small" themeColor="textSecondary">
+      <ThemedText type="inscription" themeColor="textSecondary">
         {label}
       </ThemedText>
       <ThemedText style={styles.cellValue}>{value}</ThemedText>
@@ -150,13 +153,27 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.two },
-  map: { height: 260, borderRadius: Spacing.three, marginVertical: Spacing.two },
+  map: { height: 260, marginVertical: Spacing.two },
+  summary: { gap: Spacing.two },
   headline: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
-  big: { fontSize: 60, lineHeight: 66, includeFontPadding: false, fontWeight: '800' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: Spacing.two },
+  big: {
+    fontSize: 60,
+    lineHeight: 66,
+    includeFontPadding: false,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  unit: { paddingBottom: Spacing.two, fontSize: 13, letterSpacing: 2 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
   cell: { width: '50%', paddingVertical: Spacing.two, gap: Spacing.half },
-  cellValue: { fontSize: 24, lineHeight: 30, includeFontPadding: false, fontWeight: '700' },
-  sectionTitle: { marginTop: Spacing.three },
+  cellValue: {
+    fontSize: 24,
+    lineHeight: 30,
+    includeFontPadding: false,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  sectionTitle: { marginTop: Spacing.three, fontSize: 13, letterSpacing: 3 },
   split: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -164,6 +181,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   exports: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.four },
-  exportBtn: { flex: 1, borderRadius: Spacing.three, paddingVertical: Spacing.three, alignItems: 'center' },
+  exportBtn: { flex: 1, paddingVertical: Spacing.three, alignItems: 'center' },
+  exportLabel: { fontSize: 12, letterSpacing: 2 },
   delete: { alignItems: 'center', paddingVertical: Spacing.four },
 });

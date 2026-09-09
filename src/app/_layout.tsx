@@ -1,10 +1,12 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { Cinzel_600SemiBold, Cinzel_700Bold, useFonts } from '@expo-google-fonts/cinzel';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState, useColorScheme } from 'react-native';
+import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { Colors, Fonts } from '@/constants/theme';
 import { initSchema } from '@/db/client';
 import { ensureTracking, recoverActiveRun } from '@/tracking/recorder';
 // Define la tarea de background en el arranque (side-effect import).
@@ -12,13 +14,32 @@ import '@/tracking/locationTask';
 
 SplashScreen.preventAutoHideAsync();
 
+// Waystone es dark-only: tema de navegación fijo, cabeceras talladas en Cinzel.
+const navTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: Colors.dark.background,
+    card: Colors.dark.background,
+    text: Colors.dark.text,
+    border: Colors.dark.backgroundSelected,
+    primary: Colors.dark.primary,
+  },
+};
+
+const screenOptions = {
+  headerStyle: { backgroundColor: Colors.dark.background },
+  headerTintColor: Colors.dark.text,
+  headerTitleStyle: { fontFamily: Fonts.displayBold, letterSpacing: 2, fontSize: 16 },
+  contentStyle: { backgroundColor: Colors.dark.background },
+} as const;
+
 export default function RootLayout() {
-  const scheme = useColorScheme();
+  const [fontsLoaded] = useFonts({ Cinzel_600SemiBold, Cinzel_700Bold });
 
   useEffect(() => {
     initSchema();
     recoverActiveRun().catch(() => {});
-    SplashScreen.hideAsync();
 
     // Al volver a primer plano, solo comprobar que el GPS sigue enganchado.
     // (recoverActiveRun aquí borraría una carrera recién empezada — ver recorder.ts)
@@ -28,12 +49,18 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <StatusBar style="auto" />
-        <Stack>
-          <Stack.Screen name="index" options={{ title: 'Zancada' }} />
+      <ThemeProvider value={navTheme}>
+        <StatusBar style="light" />
+        <Stack screenOptions={screenOptions}>
+          <Stack.Screen name="index" options={{ title: 'Waystone' }} />
           <Stack.Screen
             name="record"
             options={{ title: 'Carrera', headerBackVisible: false, gestureEnabled: false }}

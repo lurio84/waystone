@@ -22,9 +22,9 @@ const LOCATION_OPTIONS: Location.LocationTaskOptions = {
   activityType: Location.ActivityType.Fitness,
   showsBackgroundLocationIndicator: true,
   foregroundService: {
-    notificationTitle: 'Zancada · grabando carrera',
+    notificationTitle: 'Waystone · grabando carrera',
     notificationBody: 'GPS activo. La grabación sigue con la pantalla apagada.',
-    notificationColor: '#208AEF',
+    notificationColor: '#7D9B4E',
     killServiceOnDestroy: false,
   },
 };

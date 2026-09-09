@@ -19,7 +19,7 @@ LogManager.setLogLevel('error');
  * fallback natural es raster de OSM — pero la línea de ruta se dibuja igual
  * porque es GeoJSON local.
  */
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/bright';
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
 
 export interface RouteMapProps {
   points: { lat: number; lon: number }[];
@@ -86,7 +86,7 @@ export function RouteMap({ points, follow = false, style }: RouteMapProps) {
             type="line"
             id="route-line"
             style={{
-              lineColor: theme.primary,
+              lineColor: theme.warn,
               lineWidth: 4,
               lineCap: 'round',
               lineJoin: 'round',
@@ -95,7 +95,7 @@ export function RouteMap({ points, follow = false, style }: RouteMapProps) {
         </GeoJSONSource>
 
         <Marker lngLat={coords[0]}>
-          <View style={[styles.dot, { backgroundColor: theme.success, borderColor: theme.background }]} />
+          <View style={[styles.dot, { backgroundColor: theme.primary, borderColor: theme.background }]} />
         </Marker>
         {!follow && (
           <Marker lngLat={last}>

@@ -3,16 +3,15 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
 import { listRuns } from '@/db/runs';
 import type { RunRow } from '@/db/schema';
-import { useTheme } from '@/hooks/use-theme';
 
 export default function RunsScreen() {
-  const theme = useTheme();
   const router = useRouter();
   const [runs, setRuns] = useState<RunRow[]>([]);
 
@@ -31,19 +30,18 @@ export default function RunsScreen() {
             </ThemedText>
           }
           renderItem={({ item: r }) => (
-            <Pressable
-              onPress={() => router.push(`/run/${r.id}`)}
-              style={[styles.row, { backgroundColor: theme.backgroundElement }]}
-            >
-              <ThemedText type="smallBold" themeColor="textSecondary">
-                {formatDateTime(r.startedAt)}
-              </ThemedText>
-              <View style={styles.stats}>
-                <ThemedText type="subtitle">{formatKm(r.distanceM)} km</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {formatDuration(r.movingTimeS)} · {formatPace(r.avgPaceSPerKm)} /km
+            <Pressable onPress={() => router.push(`/run/${r.id}`)}>
+              <StonePanel style={styles.row}>
+                <ThemedText type="inscription" themeColor="textSecondary">
+                  {formatDateTime(r.startedAt)}
                 </ThemedText>
-              </View>
+                <View style={styles.stats}>
+                  <ThemedText type="subtitle">{formatKm(r.distanceM)} km</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {formatDuration(r.movingTimeS)} · {formatPace(r.avgPaceSPerKm)} /km
+                  </ThemedText>
+                </View>
+              </StonePanel>
             </Pressable>
           )}
         />
@@ -56,6 +54,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
   list: { padding: Spacing.three, gap: Spacing.two },
-  row: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.one },
+  row: { gap: Spacing.one },
   stats: { gap: Spacing.half },
 });

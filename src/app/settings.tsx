@@ -1,6 +1,7 @@
 import { StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -15,9 +16,11 @@ export default function SettingsScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={['bottom']}>
-        <View style={[styles.row, { backgroundColor: theme.backgroundElement }]}>
+        <StonePanel style={styles.row}>
           <View style={styles.rowText}>
-            <ThemedText type="smallBold">Mapa en vivo</ThemedText>
+            <ThemedText type="inscription" themeColor="textSecondary">
+              Mapa en vivo
+            </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               Muestra el recorrido en un mini-mapa mientras corres. Apágalo si
               notas que tira de batería o va a tirones en tiradas largas.
@@ -28,7 +31,7 @@ export default function SettingsScreen() {
             onValueChange={setLiveMap}
             trackColor={{ true: theme.primary }}
           />
-        </View>
+        </StonePanel>
       </SafeAreaView>
     </ThemedView>
   );
@@ -41,8 +44,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
   },
   rowText: { flex: 1, gap: Spacing.one },
 });
