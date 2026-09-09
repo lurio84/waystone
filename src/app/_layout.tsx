@@ -35,11 +35,14 @@ const screenOptions = {
 } as const;
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Cinzel_600SemiBold, Cinzel_700Bold });
+  // No bloqueamos el arranque en la fuente: si Cinzel no cargara, las
+  // inscripciones caen a la fuente del sistema — la app sigue usable.
+  useFonts({ Cinzel_600SemiBold, Cinzel_700Bold });
 
   useEffect(() => {
     initSchema();
     recoverActiveRun().catch(() => {});
+    SplashScreen.hideAsync();
 
     // Al volver a primer plano, solo comprobar que el GPS sigue enganchado.
     // (recoverActiveRun aquí borraría una carrera recién empezada — ver recorder.ts)
@@ -48,12 +51,6 @@ export default function RootLayout() {
     });
     return () => sub.remove();
   }, []);
-
-  useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
