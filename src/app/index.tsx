@@ -89,7 +89,13 @@ export default function HomeScreen() {
               { backgroundColor: hasActive ? theme.warn : theme.primary, opacity: starting ? 0.6 : 1 },
             ]}
           >
-            <ThemedText type="inscription" style={styles.ctaText} themeColor="background">
+            <ThemedText
+              type="inscription"
+              style={styles.ctaText}
+              themeColor="background"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               {hasActive ? 'Reanudar carrera' : starting ? 'Preparando…' : 'Empezar carrera'}
             </ThemedText>
           </Pressable>
@@ -163,9 +169,10 @@ const styles = StyleSheet.create({
   scroll: { padding: Spacing.three, gap: Spacing.three },
   cta: {
     paddingVertical: Spacing.five,
+    paddingHorizontal: Spacing.four,
     alignItems: 'center',
   },
-  ctaText: { fontSize: 17, letterSpacing: 3 },
+  ctaText: { fontSize: 17, letterSpacing: 2, textAlign: 'center' },
   sectionLabel: { fontSize: 13, letterSpacing: 2, flexShrink: 0 },
   devLink: { textAlign: 'center', marginTop: Spacing.four },
   headerLinks: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
