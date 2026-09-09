@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Location from 'expo-location';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import {
   addManualEvent,
   discardEmptyActiveRun,
@@ -83,12 +83,25 @@ async function startUpdates(): Promise<void> {
   await Location.startLocationUpdatesAsync(LOCATION_TASK, LOCATION_OPTIONS);
 }
 
-/** Empieza (o reanuda) la grabación. Devuelve el id de la carrera. */
+/**
+ * Reengancha el tracking de forma INCONDICIONAL: para (si estaba) y arranca.
+ * Solo llamar desde primer plano — es donde expo-location deja arrancar el
+ * foreground service. `isTaskRunning()` no vale como guarda porque miente tras
+ * un kill (el registro de la tarea se restaura de SharedPreferences).
+ */
+async function reattachUpdates(): Promise<void> {
+  try {
+    await Location.stopLocationUpdatesAsync(LOCATION_TASK);
+  } catch {
+    // no estaba corriendo
+  }
+  await startUpdates();
+}
+
+/** Empieza (o reanuda) la grabación. Se llama siempre desde primer plano. */
 export async function startRecording(): Promise<number> {
   const runId = startRun();
-  if (!(await isTaskRunning())) {
-    await startUpdates();
-  }
+  await reattachUpdates();
   return runId;
 }
 
@@ -115,31 +128,32 @@ export function resume(): void {
 }
 
 /**
- * Watchdog. Si hay carrera activa y (la tarea no corre, o el último punto es
- * viejo), relanza las actualizaciones de ubicación. Se llama al volver la app
- * a primer plano y en un intervalo mientras la pantalla de carrera está viva.
- * Devuelve true si tuvo que reengancharse.
+ * Watchdog. Reengancha las actualizaciones de ubicación si hay carrera activa
+ * y el último punto es viejo.
+ *
+ * CRÍTICO: solo actúa con la app en PRIMER PLANO. En background, expo-location
+ * se niega en silencio a arrancar el foreground service
+ * (LocationTaskConsumer.kt: "Foreground location task cannot be started while
+ * the app is in the background"). Un stop+start desde background destruye un
+ * foreground service sano y lo deja como suscripción estrangulada — es decir,
+ * el watchdog escrito para salvar la grabación es lo que la mataba. Además el
+ * stop+start incondicional era daño gratis: si ya graba bien, no se toca.
  */
 export async function ensureTracking(): Promise<boolean> {
+  if (AppState.currentState !== 'active') return false;
+
   const active = getActiveRun();
   if (!active) return false;
 
-  const running = await isTaskRunning();
   const lastTs = getLastPointTs(active.id);
+  const running = await isTaskRunning();
   const stale = lastTs != null && Date.now() - lastTs > STALE_POINT_MS;
 
-  if (!running || stale) {
-    if (running) {
-      try {
-        await Location.stopLocationUpdatesAsync(LOCATION_TASK);
-      } catch {
-        // ignorar
-      }
-    }
-    await startUpdates();
-    return true;
-  }
-  return false;
+  // Si consta corriendo y hay puntos frescos (o aún ninguno), no tocar nada.
+  if (running && !stale) return false;
+
+  await reattachUpdates();
+  return true;
 }
 
 /**
@@ -155,6 +169,8 @@ export async function recoverActiveRun(): Promise<number | null> {
   discardEmptyActiveRun();
   const active = getActiveRun();
   if (!active) return null;
-  await ensureTracking();
+  // Arranque en frío tras un kill: reenganche incondicional. La app está en
+  // primer plano (el usuario acaba de abrirla).
+  await reattachUpdates();
   return active.id;
 }

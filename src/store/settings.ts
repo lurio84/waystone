@@ -3,8 +3,10 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 interface SettingsState {
-  /** Mini-mapa en vivo en la pantalla de carrera. Se puede apagar si tira
-   *  de batería o rendimiento en una tirada larga. */
+  /** Mini-mapa en vivo en la pantalla de carrera. Por defecto APAGADO: una
+   *  superficie GL nativa + refiltrado de puntos cada 2 s con la app en
+   *  background es batería y superficie de crash a cambio de nada que el
+   *  historial no dé después. Se enciende a mano cuando la grabación sea sólida. */
   liveMap: boolean;
   setLiveMap: (v: boolean) => void;
 }
@@ -12,7 +14,7 @@ interface SettingsState {
 export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
-      liveMap: true,
+      liveMap: false,
       setLiveMap: (liveMap) => set({ liveMap }),
     }),
     { name: 'zancada.settings', storage: createJSONStorage(() => AsyncStorage) },
