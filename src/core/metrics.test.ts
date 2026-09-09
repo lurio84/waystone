@@ -1,0 +1,126 @@
+import {
+  computeMetrics,
+  computeSplits,
+  manualPauseIntervals,
+  mergeIntervals,
+  pausedMsWithin,
+} from './metrics';
+import { synthWalk } from './testutils';
+import type { RunEvent } from './types';
+
+describe('mergeIntervals', () => {
+  it('fusiona solapados y ordena', () => {
+    const merged = mergeIntervals([
+      { start: 100, end: 200 },
+      { start: 150, end: 250 },
+      { start: 400, end: 500 },
+    ]);
+    expect(merged).toEqual([
+      { start: 100, end: 250 },
+      { start: 400, end: 500 },
+    ]);
+  });
+});
+
+describe('manualPauseIntervals', () => {
+  it('empareja pause con resume', () => {
+    const events: RunEvent[] = [
+      { ts: 1000, kind: 'pause' },
+      { ts: 3000, kind: 'resume' },
+    ];
+    expect(manualPauseIntervals(events, 9999)).toEqual([{ start: 1000, end: 3000 }]);
+  });
+
+  it('cierra una pausa sin resume al final de la carrera', () => {
+    const events: RunEvent[] = [{ ts: 1000, kind: 'pause' }];
+    expect(manualPauseIntervals(events, 5000)).toEqual([{ start: 1000, end: 5000 }]);
+  });
+});
+
+describe('pausedMsWithin', () => {
+  it('recorta a la ventana pedida', () => {
+    const merged = [{ start: 0, end: 10_000 }];
+    expect(pausedMsWithin(merged, 2000, 5000)).toBe(3000);
+  });
+});
+
+describe('computeMetrics', () => {
+  it('carrera limpia de 5 min a 3 m/s → ~900 m, sin tiempo parado', () => {
+    const pts = synthWalk([{ seconds: 300, speedMs: 3 }]);
+    const m = computeMetrics(pts, []);
+    expect(m.distanceM).toBeGreaterThan(890);
+    expect(m.distanceM).toBeLessThan(910);
+    expect(m.elapsedTimeS).toBeCloseTo(300, 0);
+    expect(m.movingTimeS).toBeCloseTo(300, 0);
+    // ritmo ~5:33 /km = 333 s/km
+    expect(m.avgPaceSPerKm).toBeGreaterThan(325);
+    expect(m.avgPaceSPerKm).toBeLessThan(342);
+  });
+
+  it('el tiempo parado en un semáforo no cuenta como tiempo en movimiento', () => {
+    const pts = synthWalk([
+      { seconds: 120, speedMs: 3 },
+      { seconds: 60, speedMs: 0 },
+      { seconds: 120, speedMs: 3 },
+    ]);
+    const m = computeMetrics(pts, []);
+    expect(m.elapsedTimeS).toBeCloseTo(300, 0);
+    // ~60 s de autopausa fuera (con algo de margen por el retardo de entrada)
+    expect(m.movingTimeS).toBeGreaterThan(235);
+    expect(m.movingTimeS).toBeLessThan(255);
+  });
+
+  it('una pausa manual también sale del tiempo en movimiento', () => {
+    const startTs = 1_000_000_000_000;
+    const pts = synthWalk([{ seconds: 300, speedMs: 3 }], { startTs });
+    const events: RunEvent[] = [
+      { ts: startTs + 100_000, kind: 'pause' },
+      { ts: startTs + 130_000, kind: 'resume' },
+    ];
+    const m = computeMetrics(pts, events);
+    expect(m.movingTimeS).toBeCloseTo(270, 0);
+  });
+
+  it('devuelve ceros con menos de 2 puntos', () => {
+    expect(computeMetrics([], [])).toEqual({
+      distanceM: 0,
+      movingTimeS: 0,
+      elapsedTimeS: 0,
+      avgPaceSPerKm: 0,
+      elevGainM: 0,
+    });
+  });
+});
+
+describe('computeSplits', () => {
+  it('parte 2.4 km a 4 m/s en 3 parciales (1000, 1000, ~400)', () => {
+    const pts = synthWalk([{ seconds: 600, speedMs: 4 }]); // 2400 m
+    const splits = computeSplits(pts, []);
+    expect(splits).toHaveLength(3);
+    expect(splits[0].distanceM).toBe(1000);
+    expect(splits[1].distanceM).toBe(1000);
+    expect(splits[2].distanceM).toBeGreaterThan(360);
+    expect(splits[2].distanceM).toBeLessThan(440);
+  });
+
+  it('cada km completo dura ~250 s a 4 m/s', () => {
+    const pts = synthWalk([{ seconds: 600, speedMs: 4 }]);
+    const splits = computeSplits(pts, []);
+    expect(splits[0].durationS).toBeGreaterThan(240);
+    expect(splits[0].durationS).toBeLessThan(260);
+    expect(splits[0].paceSPerKm).toBeCloseTo(splits[0].durationS, 0);
+  });
+
+  it('una parada dentro de un km infla su ritmo pero descuenta el tiempo parado', () => {
+    const pts = synthWalk([
+      { seconds: 125, speedMs: 4 }, // 500 m
+      { seconds: 60, speedMs: 0 }, // parón
+      { seconds: 125, speedMs: 4 }, // otros 500 m -> cierra km 1
+      { seconds: 250, speedMs: 4 },
+    ]);
+    const splits = computeSplits(pts, []);
+    // el primer km: ~250 s en movimiento pese a que el reloj marcó ~310 s
+    expect(splits[0].durationS).toBeGreaterThan(235);
+    expect(splits[0].durationS).toBeLessThan(275);
+  });
+});

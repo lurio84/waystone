@@ -1,98 +1,140 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { Spacing } from '@/constants/theme';
+import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
+import { getActiveRun, listRuns } from '@/db/runs';
+import type { RunRow } from '@/db/schema';
+import { useTheme } from '@/hooks/use-theme';
+import { requestPermissions, startRecording } from '@/tracking/recorder';
+import { useSession } from '@/store/session';
 
 export default function HomeScreen() {
+  const theme = useTheme();
+  const router = useRouter();
+  const session = useSession();
+  const [runs, setRuns] = useState<RunRow[]>([]);
+  const [hasActive, setHasActive] = useState(false);
+  const [starting, setStarting] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setRuns(listRuns(5));
+      const active = getActiveRun();
+      setHasActive(!!active);
+      if (active && session.runId == null) {
+        session.begin(active.id, active.startedAt);
+      }
+    }, [session]),
+  );
+
+  const onStart = async () => {
+    setStarting(true);
+    try {
+      const perm = await requestPermissions();
+      if (perm === 'denied') {
+        Alert.alert(
+          'Permiso de ubicación',
+          'Zancada necesita acceso a la ubicación para grabar la carrera.',
+        );
+        return;
+      }
+      if (perm === 'foreground-only') {
+        Alert.alert(
+          'Ubicación en segundo plano',
+          'Sin el permiso "Permitir siempre" la grabación puede cortarse al apagar la pantalla. Puedes cambiarlo en Ajustes.',
+        );
+      }
+      const runId = await startRecording();
+      const active = getActiveRun();
+      session.begin(runId, active?.startedAt ?? Date.now());
+      router.push('/record');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const onResume = () => router.push('/record');
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Pressable
+            onPress={hasActive ? onResume : onStart}
+            disabled={starting}
+            style={[
+              styles.cta,
+              { backgroundColor: hasActive ? theme.warn : theme.primary, opacity: starting ? 0.6 : 1 },
+            ]}
+          >
+            <ThemedText style={styles.ctaText} themeColor="background">
+              {hasActive ? 'Reanudar carrera' : starting ? 'Preparando…' : 'Empezar carrera'}
+            </ThemedText>
+          </Pressable>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+          <View style={styles.listHeader}>
+            <ThemedText type="subtitle">Historial</ThemedText>
+            {runs.length > 0 && (
+              <ThemedText type="link" themeColor="primary" onPress={() => router.push('/runs')}>
+                Ver todo
+              </ThemedText>
+            )}
+          </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
+          {runs.length === 0 ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Aún no has grabado ninguna carrera.
+            </ThemedText>
+          ) : (
+            runs.map((r) => (
+              <Pressable
+                key={r.id}
+                onPress={() => router.push(`/run/${r.id}`)}
+                style={[styles.row, { backgroundColor: theme.backgroundElement }]}
+              >
+                <ThemedText type="smallBold" themeColor="textSecondary">
+                  {formatDateTime(r.startedAt)}
+                </ThemedText>
+                <View style={styles.rowStats}>
+                  <ThemedText type="subtitle">{formatKm(r.distanceM)} km</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {formatDuration(r.movingTimeS)} · {formatPace(r.avgPaceSPerKm)} /km
+                  </ThemedText>
+                </View>
+              </Pressable>
+            ))
+          )}
+        </ScrollView>
       </SafeAreaView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
+  container: { flex: 1 },
+  safe: { flex: 1 },
+  scroll: { padding: Spacing.three, gap: Spacing.three },
+  cta: {
     borderRadius: Spacing.four,
+    paddingVertical: Spacing.five,
+    alignItems: 'center',
   },
+  ctaText: { fontSize: 22, fontWeight: '700' },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.two,
+  },
+  row: {
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
+    gap: Spacing.one,
+  },
+  rowStats: { gap: Spacing.half },
 });

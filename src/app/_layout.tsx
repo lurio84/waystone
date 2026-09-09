@@ -1,18 +1,40 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { initSchema } from '@/db/client';
+import { recoverActiveRun } from '@/tracking/recorder';
+// Define la tarea de background en el arranque (side-effect import).
+import '@/tracking/locationTask';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const scheme = useColorScheme();
+
+  useEffect(() => {
+    initSchema();
+    recoverActiveRun().catch(() => {});
+    SplashScreen.hideAsync();
+  }, []);
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <StatusBar style="auto" />
+        <Stack>
+          <Stack.Screen name="index" options={{ title: 'Zancada' }} />
+          <Stack.Screen
+            name="record"
+            options={{ title: 'Carrera', headerBackVisible: false, gestureEnabled: false }}
+          />
+          <Stack.Screen name="runs" options={{ title: 'Historial' }} />
+          <Stack.Screen name="run/[id]" options={{ title: 'Carrera' }} />
+        </Stack>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
