@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,11 +10,11 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
 import { routePoints } from '@/core/metrics';
-import { RUNES } from '@/core/runes';
+import { runesForRun } from '@/core/runes';
+import { getUnlockedAchievements } from '@/db/achievements';
 import { deleteRun, getEvents, getPoints, getRun, getSplits } from '@/db/runs';
 import { useTheme } from '@/hooks/use-theme';
 import { exportRunGpx, exportRunJson } from '@/export/export-run';
-import { useSession } from '@/store/session';
 
 export default function RunDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,18 +26,14 @@ export default function RunDetailScreen() {
   const run = useMemo(() => getRun(runId), [runId]);
   const splits = useMemo(() => getSplits(runId), [runId]);
 
-  // Runas recién desbloqueadas por ESTA carrera (las deja `stopRecording` en la
-  // sesión). Se leen al montar y se vacían en un efecto — solo las de este runId.
-  const [freshRunes] = useState(() =>
-    useSession
-      .getState()
-      .pendingUnlocks.filter((u) => u.runId === runId)
-      .map((u) => RUNES.find((r) => r.id === u.id))
-      .filter((r): r is (typeof RUNES)[number] => r != null),
+  // Runas que ganó ESTA carrera, derivadas de lo persistido en `achievements`.
+  // No es un aviso puntual: sale cada vez que se abre la carrera, y sobrevive a
+  // que el proceso muera justo tras cerrarla.
+  const startedAt = run?.startedAt;
+  const runes = useMemo(
+    () => (startedAt == null ? [] : runesForRun(getUnlockedAchievements(), runId, startedAt)),
+    [runId, startedAt],
   );
-  useEffect(() => {
-    useSession.getState().drainPendingUnlocks();
-  }, []);
   const route = useMemo(
     () =>
       routePoints(getPoints(runId), getEvents(runId), {
@@ -88,15 +84,15 @@ export default function RunDetailScreen() {
             {formatDateTime(run.startedAt)}
           </ThemedText>
 
-          {freshRunes.length > 0 && (
+          {runes.length > 0 && (
             <StonePanel tone="backgroundSelected" style={styles.runeBanner}>
               <ThemedText
                 type="inscription"
                 style={[styles.runeBannerTitle, { color: theme.warn }]}
               >
-                {freshRunes.length === 1 ? 'Runa desbloqueada' : 'Runas desbloqueadas'}
+                {runes.length === 1 ? 'Runa de esta carrera' : 'Runas de esta carrera'}
               </ThemedText>
-              {freshRunes.map((r) => (
+              {runes.map((r) => (
                 <View key={r.id} style={styles.runeItem}>
                   <ThemedText type="smallBold">{r.titulo}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
