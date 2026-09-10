@@ -1,14 +1,16 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnimatedNumber } from '@/components/animated-number';
 import { RouteMap } from '@/components/route-map';
 import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
+import { formatDateTime, formatDuration, formatPace } from '@/core/format';
 import { routePoints } from '@/core/metrics';
 import { runesForRun } from '@/core/runes';
 import { getUnlockedAchievements } from '@/db/achievements';
@@ -85,22 +87,26 @@ export default function RunDetailScreen() {
           </ThemedText>
 
           {runes.length > 0 && (
-            <StonePanel tone="backgroundSelected" style={styles.runeBanner}>
-              <ThemedText
-                type="inscription"
-                style={[styles.runeBannerTitle, { color: theme.warn }]}
-              >
-                {runes.length === 1 ? 'Runa de esta carrera' : 'Runas de esta carrera'}
-              </ThemedText>
-              {runes.map((r) => (
-                <View key={r.id} style={styles.runeItem}>
-                  <ThemedText type="smallBold">{r.titulo}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {r.descripcion}
-                  </ThemedText>
-                </View>
-              ))}
-            </StonePanel>
+            <Animated.View
+              entering={FadeInDown.duration(280).delay(420).reduceMotion(ReduceMotion.System)}
+            >
+              <StonePanel tone="backgroundSelected" style={styles.runeBanner}>
+                <ThemedText
+                  type="inscription"
+                  style={[styles.runeBannerTitle, { color: theme.warn }]}
+                >
+                  {runes.length === 1 ? 'Runa de esta carrera' : 'Runas de esta carrera'}
+                </ThemedText>
+                {runes.map((r) => (
+                  <View key={r.id} style={styles.runeItem}>
+                    <ThemedText type="smallBold">{r.titulo}</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {r.descripcion}
+                    </ThemedText>
+                  </View>
+                ))}
+              </StonePanel>
+            </Animated.View>
           )}
 
           {route.length >= 2 && (
@@ -109,7 +115,14 @@ export default function RunDetailScreen() {
 
           <StonePanel style={styles.summary}>
             <View style={styles.headline}>
-              <ThemedText style={styles.big}>{formatKm(run.distanceM)}</ThemedText>
+              <AnimatedNumber
+                value={run.distanceM}
+                format={(m) => {
+                  'worklet';
+                  return (m / 1000).toFixed(2);
+                }}
+                style={[styles.big, { color: theme.text }]}
+              />
               <ThemedText type="inscription" themeColor="textSecondary" style={styles.unit}>
                 km
               </ThemedText>
