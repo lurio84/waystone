@@ -91,7 +91,6 @@ export default function HomeScreen() {
               style={styles.ctaText}
               themeColor="background"
               numberOfLines={1}
-              adjustsFontSizeToFit
             >
               {hasActive ? 'Reanudar carrera' : starting ? 'Preparando…' : 'Empezar carrera'}
             </ThemedText>
@@ -171,7 +170,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
   },
-  ctaText: { fontSize: 17, letterSpacing: 2, textAlign: 'center' },
+  // alignSelf:stretch le da un ancho acotado (si no, con alignItems:center del
+  // Pressable la caja del texto la fija su contenido y `adjustsFontSizeToFit`
+  // recortaba el último glifo de forma intermitente en Android). A fontSize 17
+  // "REANUDAR CARRERA" sobra ~100 px, no hace falta autoajuste.
+  ctaText: { alignSelf: 'stretch', fontSize: 17, letterSpacing: 2, textAlign: 'center' },
   // flex:1 + paddingRight: la letra final no se recorta por el letterSpacing de cola (bug Android)
   sectionLabel: { flex: 1, fontSize: 13, letterSpacing: 2, paddingRight: Spacing.two },
   devLink: { textAlign: 'center', marginTop: Spacing.four },
