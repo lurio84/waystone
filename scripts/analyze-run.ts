@@ -18,7 +18,12 @@
 import { readFileSync } from 'node:fs';
 import { haversineMeters } from '../src/core/geo';
 import { formatDuration, formatPace } from '../src/core/format';
-import { computeMetrics, computeSplits } from '../src/core/metrics';
+import {
+  computeMetrics,
+  computeSplits,
+  DEFAULT_DATA_GAP_S,
+  dataGapIntervals,
+} from '../src/core/metrics';
 import type { RawPoint, RunEvent } from '../src/core/types';
 
 interface RunRow {
@@ -109,9 +114,17 @@ line();
 const opts = { startedAt, endedAt: endedAt ?? undefined };
 const m = computeMetrics(points, events, opts);
 const s = computeSplits(points, events, 1000, opts);
+// qué le descontó al "en movimiento" el umbral de hueco de datos
+const dataGaps = dataGapIntervals(real, DEFAULT_DATA_GAP_S);
+const dataGapMs = dataGaps.reduce((acc, iv) => acc + (iv.end - iv.start), 0);
+
 line('MÉTRICAS  (recalculadas con el código de hoy)');
 line(`  distancia     : ${(m.distanceM / 1000).toFixed(3)} km`);
 line(`  en movimiento : ${formatDuration(m.movingTimeS)}`);
+line(
+  `  huecos >${DEFAULT_DATA_GAP_S}s : ${dataGaps.length}  ` +
+    `·  ${min(dataGapMs)} min fuera del "en movimiento"`,
+);
 line(`  ritmo medio   : ${formatPace(m.avgPaceSPerKm)} /km`);
 line(`  desnivel +    : ${m.elevGainM.toFixed(0)} m`);
 line(`  parciales     : ${s.length}`);
@@ -123,7 +136,11 @@ line(`  elapsed       : ${formatDuration(run.elapsedTimeS)}`);
 line(`  ritmo medio   : ${formatPace(run.avgPaceSPerKm)} /km`);
 const diverge =
   Math.abs(run.distanceM - m.distanceM) > 20 ||
-  Math.abs(run.elapsedTimeS - clockBoundedS) > 30;
+  Math.abs(run.elapsedTimeS - clockBoundedS) > 30 ||
+  // un hueco largo de GPS puede dejar distancia y elapsed casi intactos y
+  // desviar solo el tiempo en movimiento (varios minutos): sin esta línea
+  // el chivato diría "coinciden" justo en el caso del P0.
+  Math.abs(run.movingTimeS - m.movingTimeS) > 30;
 line();
 line(diverge
   ? '⚠  caché y recálculo divergen → el APK del móvil es anterior a los fixes (esperado). Manda el recálculo.'

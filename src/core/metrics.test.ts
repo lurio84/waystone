@@ -1,13 +1,16 @@
 import {
   computeMetrics,
   computeSplits,
+  dataGapIntervals,
+  DEFAULT_DATA_GAP_S,
   isPausedByEvents,
   manualPauseIntervals,
   mergeIntervals,
   pausedMsWithin,
   routePoints,
+  routeSegments,
 } from './metrics';
-import { filterPoints } from './geo';
+import { filterPoints, haversineMeters } from './geo';
 import { synthWalk } from './testutils';
 import type { RunEvent } from './types';
 
@@ -37,6 +40,41 @@ describe('manualPauseIntervals', () => {
   it('cierra una pausa sin resume al final de la carrera', () => {
     const events: RunEvent[] = [{ ts: 1000, kind: 'pause' }];
     expect(manualPauseIntervals(events, 5000)).toEqual([{ start: 1000, end: 5000 }]);
+  });
+});
+
+describe('dataGapIntervals', () => {
+  it('muestreo continuo (1 pt/s) → ningún hueco', () => {
+    const pts = synthWalk([{ seconds: 200, speedMs: 3 }]);
+    expect(dataGapIntervals(pts)).toEqual([]);
+  });
+
+  it('un hueco de varios minutos → un intervalo [antes, después]', () => {
+    const a = synthWalk([{ seconds: 60, speedMs: 3 }], { startTs: 1_000_000_000_000 });
+    const last = a[a.length - 1];
+    const b = synthWalk([{ seconds: 60, speedMs: 3 }], { startTs: last.ts + 600_000 });
+    const gaps = dataGapIntervals([...a, ...b]);
+    expect(gaps).toEqual([{ start: last.ts, end: last.ts + 600_000 }]);
+  });
+
+  it('un hueco por debajo del umbral no cuenta', () => {
+    const a = synthWalk([{ seconds: 60, speedMs: 3 }], { startTs: 1_000_000_000_000 });
+    const last = a[a.length - 1];
+    const b = synthWalk([{ seconds: 60, speedMs: 3 }], {
+      startTs: last.ts + (DEFAULT_DATA_GAP_S - 5) * 1000,
+    });
+    expect(dataGapIntervals([...a, ...b])).toEqual([]);
+  });
+
+  it('dos huecos → dos intervalos', () => {
+    const a = synthWalk([{ seconds: 30, speedMs: 3 }], { startTs: 1_000_000_000_000 });
+    const b = synthWalk([{ seconds: 30, speedMs: 3 }], {
+      startTs: a[a.length - 1].ts + 300_000,
+    });
+    const c = synthWalk([{ seconds: 30, speedMs: 3 }], {
+      startTs: b[b.length - 1].ts + 400_000,
+    });
+    expect(dataGapIntervals([...a, ...b, ...c])).toHaveLength(2);
   });
 });
 
@@ -211,6 +249,88 @@ describe('computeMetrics', () => {
       const m = computeMetrics(pts, [], { startedAt: startTs });
       expect(m.elapsedTimeS).toBeCloseTo(300, 0);
       expect(m.distanceM).toBeGreaterThan(890);
+    });
+  });
+
+  describe('hueco largo de GPS (grabación muerta a media, P0)', () => {
+    // FIXTURE PROVISIONAL — sintético y a imagen de lo que se espera. Se
+    // sustituye por el export real de la primera carrera en que salte el P0
+    // (ver plan). Los fixtures de make-fixture.ts subestiman este problema.
+    const startTs = 1_000_000_000_000;
+
+    /**
+     * 17 min corriendo, el proceso muere, revive 13 min después ~2 km al
+     * norte (el corredor siguió corriendo mientras la app estaba muerta),
+     * 10 min más y "Terminar". Reloj total: 40 min.
+     */
+    function runWithGap() {
+      const before = synthWalk([{ seconds: 17 * 60, speedMs: 3 }], { startTs });
+      const last = before[before.length - 1];
+      const gapMs = 13 * 60_000;
+      const after = synthWalk([{ seconds: 10 * 60, speedMs: 3 }], {
+        startTs: last.ts + gapMs,
+        startLat: last.lat + 2000 / 111_320,
+      });
+      return {
+        points: [...before, ...after],
+        opts: { startedAt: startTs, endedAt: after[after.length - 1].ts },
+      };
+    }
+
+    it('el hueco NO cuenta como tiempo en movimiento', () => {
+      const { points, opts } = runWithGap();
+      const m = computeMetrics(points, [], opts);
+      // 1020 s + 600 s de carrera real ≈ 27 min; NADA de los 13 min muertos
+      expect(m.movingTimeS).toBeGreaterThan(1550);
+      expect(m.movingTimeS).toBeLessThan(1700);
+    });
+
+    it('el salto en línea recta del hueco NO cuenta como distancia', () => {
+      const { points, opts } = runWithGap();
+      const m = computeMetrics(points, [], opts);
+      // ~3060 m + ~1800 m de carrera real; SIN los ~2000 m del teletransporte
+      expect(m.distanceM).toBeGreaterThan(4650);
+      expect(m.distanceM).toBeLessThan(5100);
+    });
+
+    it('el reloj de pared (elapsed) SÍ incluye el hueco', () => {
+      const { points, opts } = runWithGap();
+      const m = computeMetrics(points, [], opts);
+      expect(m.elapsedTimeS).toBeCloseTo(40 * 60, 0);
+    });
+
+    it('la traza se parte en el hueco en vez de cruzarlo en recta', () => {
+      const { points, opts } = runWithGap();
+      const segs = routeSegments(points, [], opts);
+      // dos tramos: antes y después del hueco
+      expect(segs.length).toBeGreaterThanOrEqual(2);
+      // dentro de cada tramo, ningún salto de 2 km
+      for (const seg of segs) {
+        let maxStep = 0;
+        for (let i = 1; i < seg.length; i++) {
+          maxStep = Math.max(maxStep, haversineMeters(seg[i - 1], seg[i]));
+        }
+        expect(maxStep).toBeLessThan(50);
+      }
+    });
+
+    it('el umbral se propaga desde MetricsOptions', () => {
+      // hueco de 10 s en mitad de una carrera por lo demás continua
+      const a = synthWalk([{ seconds: 120, speedMs: 3 }], { startTs });
+      const last = a[a.length - 1];
+      const b = synthWalk([{ seconds: 120, speedMs: 3 }], {
+        startTs: last.ts + 10_000,
+        startLat: last.lat,
+      });
+      const pts = [...a, ...b];
+      const o = { startedAt: startTs, endedAt: pts[pts.length - 1].ts };
+
+      // con el umbral por defecto (20 s) el hueco de 10 s no cuenta
+      expect(computeMetrics(pts, [], o).movingTimeS).toBeGreaterThan(245);
+      // bajándolo a 5 s, esos 10 s salen del tiempo en movimiento
+      const tight = computeMetrics(pts, [], { ...o, dataGapS: 5 }).movingTimeS;
+      expect(tight).toBeLessThan(245);
+      expect(tight).toBeGreaterThan(235);
     });
   });
 });

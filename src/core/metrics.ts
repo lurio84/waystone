@@ -9,6 +9,14 @@ import type { Interval, RawPoint, RunEvent, RunMetrics, Split } from './types';
  */
 export const MIN_PACE_DISTANCE_M = 50;
 
+/**
+ * Hueco máximo (s) entre dos puntos consecutivos antes de tratar ese tramo
+ * como "sin datos". Holgado respecto al muestreo real (~1,1 s): un túnel o
+ * un cañón urbano deja huecos de segundos; que el SO mate el proceso con la
+ * pantalla apagada (el P0) deja huecos de minutos.
+ */
+export const DEFAULT_DATA_GAP_S = 20;
+
 function tsInAnyInterval(ts: number, intervals: Interval[]): boolean {
   for (const iv of intervals) {
     if (ts >= iv.start && ts <= iv.end) return true;
@@ -66,6 +74,33 @@ export function isPausedByEvents(events: RunEvent[]): boolean {
   return paused;
 }
 
+/**
+ * Intervalos en que la grabación se quedó SIN datos: pares de puntos
+ * consecutivos separados más de `maxGapS`. No es una pausa —es que no
+ * sabemos qué pasó—: si el proceso murió con la pantalla apagada (P0), al
+ * revivir el GPS entrega el siguiente punto minutos después y a cientos de
+ * metros. La autopausa no lo ve: la velocidad *derivada* entre esos dos
+ * puntos es alta, no baja. Sin esto, `movingDistanceMeters` traza una recta
+ * por el salto y la cuenta como distancia, y el hueco entero cuenta como
+ * tiempo en movimiento.
+ *
+ * Se trata igual que una pausa (misma tubería `allPauses`): fuera de la
+ * distancia, del tiempo en movimiento y de la traza del mapa.
+ */
+export function dataGapIntervals(
+  points: RawPoint[],
+  maxGapS: number = DEFAULT_DATA_GAP_S,
+): Interval[] {
+  const maxGapMs = maxGapS * 1000;
+  const intervals: Interval[] = [];
+  for (let i = 1; i < points.length; i++) {
+    if (points[i].ts - points[i - 1].ts > maxGapMs) {
+      intervals.push({ start: points[i - 1].ts, end: points[i].ts });
+    }
+  }
+  return intervals;
+}
+
 /** Une intervalos solapados o contiguos en una lista mínima y ordenada. */
 export function mergeIntervals(intervals: Interval[]): Interval[] {
   if (intervals.length === 0) return [];
@@ -104,10 +139,12 @@ export function allPauses(
   events: RunEvent[],
   runEndTs: number,
   autopause: AutoPauseOptions = DEFAULT_AUTOPAUSE,
+  dataGapS: number = DEFAULT_DATA_GAP_S,
 ): Interval[] {
   return mergeIntervals([
     ...manualPauseIntervals(events, runEndTs),
     ...autoPauseIntervals(points, autopause),
+    ...dataGapIntervals(points, dataGapS),
   ]);
 }
 
@@ -117,6 +154,8 @@ export interface MetricsOptions {
   startedAt?: number;
   /** epoch ms del "Terminar" (columna `runs.ended_at`). */
   endedAt?: number;
+  /** hueco máx. (s) entre puntos antes de tratar el tramo como sin datos. */
+  dataGapS?: number;
 }
 
 /**
@@ -163,7 +202,13 @@ export function computeMetrics(
   const elapsedMs = Math.max(0, endTs - startTs);
 
   const filtered = filterPoints(pts);
-  const pauses = allPauses(pts, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
+  const pauses = allPauses(
+    pts,
+    events,
+    endTs,
+    opts.autopause ?? DEFAULT_AUTOPAUSE,
+    opts.dataGapS ?? DEFAULT_DATA_GAP_S,
+  );
 
   const distanceM = movingDistanceMeters(filtered, pauses);
   const elevGainM = elevationGainMeters(filtered);
@@ -184,23 +229,58 @@ export function computeMetrics(
 }
 
 /**
+ * La traza del mapa partida en tramos continuos: los puntos usables
+ * (filtrados por precisión) y EN MOVIMIENTO, agrupados en segmentos que se
+ * cortan allí donde hubo una pausa o un hueco de datos. El mapa dibuja un
+ * polilínea por tramo (MultiLineString) — así una parada en un semáforo o
+ * una grabación muerta a media dejan un corte visible, no una recta
+ * fantasma. Misma regla de pausas que `movingDistanceMeters`.
+ */
+export function routeSegments(
+  points: RawPoint[],
+  events: RunEvent[],
+  opts: MetricsOptions = {},
+): RawPoint[][] {
+  const pts = trimPreStart(points, opts.startedAt);
+  if (pts.length === 0) return [];
+  const filtered = filterPoints(pts);
+  if (filtered.length === 0) return [];
+  const endTs = boundedEndTs(pts[pts.length - 1].ts, opts.endedAt);
+  const pauses = allPauses(
+    pts,
+    events,
+    endTs,
+    opts.autopause ?? DEFAULT_AUTOPAUSE,
+    opts.dataGapS ?? DEFAULT_DATA_GAP_S,
+  );
+
+  const segments: RawPoint[][] = [];
+  let current: RawPoint[] = [];
+  for (const p of filtered) {
+    if (tsInAnyInterval(p.ts, pauses)) {
+      if (current.length) segments.push(current);
+      current = [];
+    } else {
+      current.push(p);
+    }
+  }
+  if (current.length) segments.push(current);
+  return segments;
+}
+
+/**
  * Puntos para dibujar la traza en el mapa: los usables (filtrados por precisión)
  * y EN MOVIMIENTO — se quitan los que caen dentro de una pausa. Sin esto, un
  * rato parado dibuja una maraña de deriva del GPS donde no hubo recorrido.
- * Misma regla que `movingDistanceMeters`.
+ * Misma regla que `movingDistanceMeters`. Array plano; para cortar la línea
+ * en las pausas usar `routeSegments`.
  */
 export function routePoints(
   points: RawPoint[],
   events: RunEvent[],
   opts: MetricsOptions = {},
 ): RawPoint[] {
-  const pts = trimPreStart(points, opts.startedAt);
-  if (pts.length === 0) return [];
-  const filtered = filterPoints(pts);
-  if (filtered.length === 0) return [];
-  const endTs = boundedEndTs(pts[pts.length - 1].ts, opts.endedAt);
-  const pauses = allPauses(pts, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
-  return filtered.filter((p) => !tsInAnyInterval(p.ts, pauses));
+  return routeSegments(points, events, opts).flat();
 }
 
 /**
@@ -224,7 +304,13 @@ export function computeSplits(
 
   const lastTs = pts.length ? pts[pts.length - 1].ts : filtered[filtered.length - 1].ts;
   const endTs = boundedEndTs(lastTs, opts.endedAt);
-  const pauses = allPauses(pts, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
+  const pauses = allPauses(
+    pts,
+    events,
+    endTs,
+    opts.autopause ?? DEFAULT_AUTOPAUSE,
+    opts.dataGapS ?? DEFAULT_DATA_GAP_S,
+  );
 
   const splits: Split[] = [];
   let cumDist = 0;
