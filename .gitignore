@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# fixtures regenerables con scripts/fixtures/make-fixture.ts
+/scripts/fixtures/*.json
