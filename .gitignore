@@ -40,7 +40,10 @@ example
 
 # generated native folders
 /ios
-/android
+# /android SÍ se versiona: sin EAS, con gradle tuneado a mano (arm64-only +
+# jvmargs) que `expo prebuild` resetea y es el único motivo de que el build
+# termine en Windows. `android/.gitignore` excluye build/, .gradle/, .cxx/ y
+# local.properties (ruta absoluta de máquina).
 
 # fixtures regenerables con scripts/fixtures/make-fixture.ts
 /scripts/fixtures/*.json
