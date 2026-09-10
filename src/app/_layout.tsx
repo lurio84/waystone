@@ -69,6 +69,7 @@ export default function RootLayout() {
           />
           <Stack.Screen name="runs" options={{ title: 'Historial' }} />
           <Stack.Screen name="run/[id]" options={{ title: 'Carrera' }} />
+          <Stack.Screen name="profile" options={{ title: 'Perfil' }} />
           <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="dev-sim" options={{ title: 'Simulador' }} />
         </Stack>

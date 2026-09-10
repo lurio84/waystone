@@ -80,6 +80,9 @@ export const RUNES: readonly RuneDef[] = [
     id: 'tres-seguidas',
     titulo: 'Tres piedras seguidas',
     descripcion: 'Corre tres días seguidos.',
+    // O(n²): dayStreak reconstruye un Set por iteración. Trivial a la escala de
+    // esta app (una persona, decenas de carreras); si algún día importa, se
+    // precalcula el set de días una vez.
     trigger: (runs) => {
       for (let i = 0; i < runs.length; i++) {
         if (dayStreak(runs.slice(0, i + 1), runs[i].startedAt) >= 3) return runs[i];
