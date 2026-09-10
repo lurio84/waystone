@@ -1,63 +1,69 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Waystone es un mojón de piedra tallado al borde del camino. Solo modo
+ * oscuro: la paleta piedra/pizarra + musgo + ámbar + óxido no tiene una
+ * versión clara honesta, y correr al amanecer o al anochecer pide fondo
+ * oscuro. Los tres acentos son un sistema semántico, no decoración:
+ * musgo actúa, ámbar avisa, óxido cierra.
  */
 
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-    primary: '#208AEF',
-    danger: '#E5484D',
-    success: '#30A46C',
-    warn: '#F5A623',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-    primary: '#4DA2FF',
-    danger: '#FF6369',
-    success: '#3DD68C',
-    warn: '#FFC53D',
-  },
+const palette = {
+  background: '#161B1E', // pizarra mojada
+  backgroundElement: '#222A2E', // la cara de la piedra
+  backgroundSelected: '#2E383D', // piedra iluminada
+  text: '#E8E4DA', // caliza / hueso
+  textSecondary: '#94A39F', // liquen
+  primary: '#7D9B4E', // musgo = acción
+  warn: '#D9A441', // ámbar = atención
+  danger: '#B4553F', // óxido = terminar / destructivo
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+/** Una sola paleta: la app es dark-only. `light`/`dark` apuntan a lo mismo
+ *  para no romper a quien indexe por esquema. */
+export const Colors = { light: palette, dark: palette } as const;
+
+export type ThemeColor = keyof typeof palette;
+
+/** Borde tallado: una cara más clara, otra más oscura — lee como incisión
+ *  en la piedra, no como el borde de una tarjeta. */
+export const Carve = {
+  top: 'rgba(232, 228, 218, 0.10)', // luz rasante desde arriba
+  bottom: 'rgba(0, 0, 0, 0.28)', // sombra abajo
+} as const;
+
+/** Chaflán a 45° en una esquina de cada panel: la firma de la forma. */
+export const Chamfer = 14;
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
+    /** Inscripciones: Cinzel, capital romana tallada. Nunca datos. */
+    display: 'Cinzel_600SemiBold',
+    displayBold: 'Cinzel_700Bold',
   },
   default: {
     sans: 'normal',
     serif: 'serif',
     rounded: 'normal',
     mono: 'monospace',
+    display: 'Cinzel_600SemiBold',
+    displayBold: 'Cinzel_700Bold',
   },
   web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
+    sans: 'system-ui, sans-serif',
+    serif: 'Georgia, serif',
+    rounded: 'system-ui, sans-serif',
+    mono: 'monospace',
+    display: 'Cinzel, Georgia, serif',
+    displayBold: 'Cinzel, Georgia, serif',
   },
-});
+})!;
 
 export const Spacing = {
   half: 2,

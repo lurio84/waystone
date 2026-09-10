@@ -1,10 +1,20 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { Fonts, ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
+  type?:
+    | 'default'
+    | 'title'
+    | 'small'
+    | 'smallBold'
+    | 'subtitle'
+    | 'link'
+    | 'linkPrimary'
+    | 'code'
+    /** Inscripción tallada: Cinzel, versales, tracking amplio. Solo rótulos, nunca datos. */
+    | 'inscription';
   themeColor?: ThemeColor;
 };
 
@@ -23,6 +33,7 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
         type === 'link' && styles.link,
         type === 'linkPrimary' && styles.linkPrimary,
         type === 'code' && styles.code,
+        type === 'inscription' && styles.inscription,
         style,
       ]}
       {...rest}
@@ -30,31 +41,36 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
   );
 }
 
+// Los datos van con cifras tabulares: sin esto el número grande baila en cada tick.
+const tabular = { fontVariant: ['tabular-nums' as const] };
+
 const styles = StyleSheet.create({
   small: {
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: 500,
+    fontWeight: '500',
   },
   smallBold: {
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: 700,
+    fontWeight: '700',
   },
   default: {
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: 500,
+    fontWeight: '500',
   },
   title: {
     fontSize: 48,
-    fontWeight: 600,
+    fontWeight: '600',
     lineHeight: 52,
+    ...tabular,
   },
   subtitle: {
     fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
+    lineHeight: 40,
+    fontWeight: '600',
+    ...tabular,
   },
   link: {
     lineHeight: 30,
@@ -67,7 +83,14 @@ const styles = StyleSheet.create({
   },
   code: {
     fontFamily: Fonts.mono,
-    fontWeight: Platform.select({ android: 700 }) ?? 500,
+    fontWeight: '700',
     fontSize: 12,
+  },
+  inscription: {
+    fontFamily: Fonts.display,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
 });

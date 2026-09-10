@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -88,13 +89,21 @@ export default function HomeScreen() {
               { backgroundColor: hasActive ? theme.warn : theme.primary, opacity: starting ? 0.6 : 1 },
             ]}
           >
-            <ThemedText style={styles.ctaText} themeColor="background">
+            <ThemedText
+              type="inscription"
+              style={styles.ctaText}
+              themeColor="background"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               {hasActive ? 'Reanudar carrera' : starting ? 'Preparando…' : 'Empezar carrera'}
             </ThemedText>
           </Pressable>
 
           <View style={styles.listHeader}>
-            <ThemedText type="subtitle">Historial</ThemedText>
+            <ThemedText type="inscription" themeColor="textSecondary" style={styles.sectionLabel}>
+              Historial
+            </ThemedText>
             <View style={styles.headerLinks}>
               {runs.length > 0 && (
                 <ThemedText type="link" themeColor="primary" onPress={() => router.push('/runs')}>
@@ -117,20 +126,18 @@ export default function HomeScreen() {
             </ThemedText>
           ) : (
             runs.map((r) => (
-              <Pressable
-                key={r.id}
-                onPress={() => router.push(`/run/${r.id}`)}
-                style={[styles.row, { backgroundColor: theme.backgroundElement }]}
-              >
-                <ThemedText type="smallBold" themeColor="textSecondary">
-                  {formatDateTime(r.startedAt)}
-                </ThemedText>
-                <View style={styles.rowStats}>
-                  <ThemedText type="subtitle">{formatKm(r.distanceM)} km</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {formatDuration(r.movingTimeS)} · {formatPace(r.avgPaceSPerKm)} /km
+              <Pressable key={r.id} onPress={() => router.push(`/run/${r.id}`)}>
+                <StonePanel style={styles.row}>
+                  <ThemedText type="inscription" themeColor="textSecondary">
+                    {formatDateTime(r.startedAt)}
                   </ThemedText>
-                </View>
+                  <View style={styles.rowStats}>
+                    <ThemedText type="subtitle">{formatKm(r.distanceM)} km</ThemedText>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {formatDuration(r.movingTimeS)} · {formatPace(r.avgPaceSPerKm)} /km
+                    </ThemedText>
+                  </View>
+                </StonePanel>
               </Pressable>
             ))
           )}
@@ -156,22 +163,21 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.three },
   cta: {
-    borderRadius: Spacing.four,
     paddingVertical: Spacing.five,
+    paddingHorizontal: Spacing.four,
     alignItems: 'center',
   },
-  ctaText: { fontSize: 22, fontWeight: '700' },
+  ctaText: { fontSize: 17, letterSpacing: 2, textAlign: 'center' },
+  // flex:1 + paddingRight: la letra final no se recorta por el letterSpacing de cola (bug Android)
+  sectionLabel: { flex: 1, fontSize: 13, letterSpacing: 2, paddingRight: Spacing.two },
   devLink: { textAlign: 'center', marginTop: Spacing.four },
   headerLinks: { flexDirection: 'row', gap: Spacing.three, alignItems: 'center' },
   listHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'baseline',
     marginTop: Spacing.two,
   },
   row: {
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
     gap: Spacing.one,
   },
   rowStats: { gap: Spacing.half },

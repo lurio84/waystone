@@ -1,10 +1,11 @@
 import { useKeepAwake } from 'expo-keep-awake';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, AppState, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RouteMap } from '@/components/route-map';
+import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -53,6 +54,10 @@ export default function RecordScreen() {
   const paused = session.status === 'paused';
   const showPausedBanner = paused || metrics.autoPaused;
 
+  // Muescas en el canto de la piedra: una por km cerrado. El mojón marca distancia.
+  const km = Math.max(0, Math.floor(metrics.distanceM / 1000));
+  const notches = useMemo(() => Array.from({ length: km }), [km]);
+
   const onTogglePause = () => {
     if (paused) {
       resume();
@@ -83,8 +88,8 @@ export default function RecordScreen() {
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         {showPausedBanner && (
           <View style={[styles.banner, { backgroundColor: theme.warn }]}>
-            <ThemedText style={styles.bannerText} themeColor="background">
-              {paused ? 'EN PAUSA' : 'PAUSA AUTOMÁTICA'}
+            <ThemedText type="inscription" themeColor="background" style={styles.bannerText}>
+              {paused ? 'En pausa' : 'Pausa automática'}
             </ThemedText>
           </View>
         )}
@@ -94,21 +99,35 @@ export default function RecordScreen() {
         )}
 
         <View style={styles.main}>
-          <View style={styles.distanceBlock}>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
-              DISTANCIA · KM
+          <StonePanel tone="backgroundElement" style={styles.face}>
+            <ThemedText type="inscription" themeColor="textSecondary">
+              Distancia
             </ThemedText>
-            <ThemedText style={styles.distance}>{formatKm(metrics.distanceM)}</ThemedText>
-          </View>
+            <View style={styles.distanceRow}>
+              <ThemedText style={[styles.distance, { color: theme.text }]}>
+                {formatKm(metrics.distanceM)}
+              </ThemedText>
+              <ThemedText type="inscription" themeColor="textSecondary" style={styles.unit}>
+                km
+              </ThemedText>
+            </View>
+            {km > 0 && (
+              <View style={styles.notches}>
+                {notches.map((_, i) => (
+                  <View key={i} style={[styles.notch, { backgroundColor: theme.warn }]} />
+                ))}
+              </View>
+            )}
+          </StonePanel>
 
           <View style={styles.metricsGroup}>
             <View style={styles.pair}>
-              <Metric label="TIEMPO" value={formatDuration(elapsedS)} />
-              <Metric label="RITMO · /KM" value={formatPace(metrics.currentPaceSPerKm)} />
+              <Metric label="Tiempo" value={formatDuration(elapsedS)} />
+              <Metric label="Ritmo /km" value={formatPace(metrics.currentPaceSPerKm)} />
             </View>
             <View style={styles.pair}>
-              <Metric label="EN MOVIMIENTO" value={formatDuration(metrics.movingTimeS)} />
-              <Metric label="RITMO MEDIO" value={formatPace(metrics.avgPaceSPerKm)} />
+              <Metric label="En movimiento" value={formatDuration(metrics.movingTimeS)} />
+              <Metric label="Ritmo medio" value={formatPace(metrics.avgPaceSPerKm)} />
             </View>
           </View>
         </View>
@@ -116,12 +135,14 @@ export default function RecordScreen() {
         <View style={styles.actions}>
           <Pressable
             onPress={onTogglePause}
-            style={[styles.btn, { backgroundColor: theme.backgroundElement }]}
+            style={[styles.btn, { backgroundColor: theme.backgroundSelected }]}
           >
-            <ThemedText style={styles.btnText}>{paused ? 'Reanudar' : 'Pausar'}</ThemedText>
+            <ThemedText type="inscription" style={styles.btnText}>
+              {paused ? 'Reanudar' : 'Pausar'}
+            </ThemedText>
           </Pressable>
           <Pressable onPress={onFinish} style={[styles.btn, { backgroundColor: theme.danger }]}>
-            <ThemedText style={styles.btnText} themeColor="background">
+            <ThemedText type="inscription" themeColor="text" style={styles.btnText}>
               Terminar
             </ThemedText>
           </Pressable>
@@ -134,7 +155,7 @@ export default function RecordScreen() {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.metric}>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.label}>
+      <ThemedText type="inscription" themeColor="textSecondary">
         {label}
       </ThemedText>
       <ThemedText style={styles.metricValue}>{value}</ThemedText>
@@ -146,33 +167,41 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safe: { flex: 1 },
   banner: { paddingVertical: Spacing.two, alignItems: 'center' },
-  bannerText: { fontSize: 16, fontWeight: '800', letterSpacing: 1 },
-  map: { height: '34%' },
+  bannerText: { fontSize: 13, letterSpacing: 3 },
+  map: { height: '30%' },
   main: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     gap: Spacing.five,
   },
-  label: { letterSpacing: 1.5, textAlign: 'center' },
-  distanceBlock: { alignItems: 'center', gap: Spacing.two },
+  face: {
+    alignItems: 'center',
+    paddingVertical: Spacing.five,
+    gap: Spacing.two,
+  },
+  distanceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
   distance: {
-    fontSize: 92,
-    lineHeight: 100,
+    fontSize: 88,
+    lineHeight: 92,
     includeFontPadding: false,
     fontWeight: '800',
-    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
+  unit: { paddingBottom: Spacing.three, fontSize: 14, letterSpacing: 2 },
+  notches: { flexDirection: 'row', gap: Spacing.one, marginTop: Spacing.two },
+  notch: { width: 3, height: 14 },
   metricsGroup: { gap: Spacing.four },
   pair: { flexDirection: 'row' },
   metric: { flex: 1, alignItems: 'center', gap: Spacing.one },
   metricValue: {
-    fontSize: 38,
-    lineHeight: 44,
+    fontSize: 34,
+    lineHeight: 40,
     includeFontPadding: false,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   actions: { flexDirection: 'row', gap: Spacing.two, padding: Spacing.three },
-  btn: { flex: 1, borderRadius: Spacing.four, paddingVertical: Spacing.four, alignItems: 'center' },
-  btnText: { fontSize: 20, fontWeight: '700' },
+  btn: { flex: 1, paddingVertical: Spacing.four, alignItems: 'center' },
+  btnText: { fontSize: 15, letterSpacing: 3 },
 });
