@@ -25,14 +25,22 @@ TaskManager.defineTask<{ locations?: Location.LocationObject[] }>(
     const active = getActiveRun();
     if (!active) return;
 
-    const pts: RawPoint[] = data.locations.map((l) => ({
-      ts: Math.round(l.timestamp),
-      lat: l.coords.latitude,
-      lon: l.coords.longitude,
-      altitude: l.coords.altitude ?? null,
-      accuracy: l.coords.accuracy ?? null,
-      speed: l.coords.speed ?? null,
-    }));
+    const pts: RawPoint[] = data.locations
+      .map((l) => ({
+        ts: Math.round(l.timestamp),
+        lat: l.coords.latitude,
+        lon: l.coords.longitude,
+        altitude: l.coords.altitude ?? null,
+        accuracy: l.coords.accuracy ?? null,
+        speed: l.coords.speed ?? null,
+      }))
+      // Descarta el "punto fantasma": expo-location entrega como primer punto
+      // la última ubicación conocida, con su ts ORIGINAL (puede ser de hace
+      // minutos, o de la sesión anterior). No es de esta carrera — dibujaba
+      // un teletransporte en el mapa y en el GPX. Se filtra aquí, en el único
+      // sitio de escritura, no en cada lectura. (`src/core` sigue recortando
+      // por `startedAt` como defensa para carreras ya grabadas.)
+      .filter((p) => p.ts >= active.startedAt);
 
     insertPoints(active.id, pts);
   },

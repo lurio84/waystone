@@ -184,6 +184,26 @@ export function computeMetrics(
 }
 
 /**
+ * Puntos para dibujar la traza en el mapa: los usables (filtrados por precisión)
+ * y EN MOVIMIENTO — se quitan los que caen dentro de una pausa. Sin esto, un
+ * rato parado dibuja una maraña de deriva del GPS donde no hubo recorrido.
+ * Misma regla que `movingDistanceMeters`.
+ */
+export function routePoints(
+  points: RawPoint[],
+  events: RunEvent[],
+  opts: MetricsOptions = {},
+): RawPoint[] {
+  const pts = trimPreStart(points, opts.startedAt);
+  if (pts.length === 0) return [];
+  const filtered = filterPoints(pts);
+  if (filtered.length === 0) return [];
+  const endTs = boundedEndTs(pts[pts.length - 1].ts, opts.endedAt);
+  const pauses = allPauses(pts, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
+  return filtered.filter((p) => !tsInAnyInterval(p.ts, pauses));
+}
+
+/**
  * Parciales por distancia (1 km por defecto). El instante en que se cruza
  * cada marca se interpola linealmente entre los dos puntos que la rodean,
  * en vez de coger el punto más cercano: con muestreo de 1 s eso son hasta

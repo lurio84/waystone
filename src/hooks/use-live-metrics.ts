@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { filterPoints } from '@/core/geo';
 import { currentPaceSPerKm, isAutoPausedNow } from '@/core/live';
-import { computeMetrics } from '@/core/metrics';
+import { computeMetrics, routePoints } from '@/core/metrics';
 import type { RawPoint } from '@/core/types';
 import { getEvents, getPoints } from '@/db/runs';
 
@@ -55,12 +54,13 @@ export function useLiveMetrics(
       // startedAt (sin endedAt, la carrera está viva): descarta el punto
       // fantasma del arranque para que "En movimiento" y "Ritmo medio" no
       // salgan inflados. El cronómetro "Tiempo" ya es reloj de pared aparte.
-      const base = computeMetrics(points, events, startedAt != null ? { startedAt } : {});
+      const opts = startedAt != null ? { startedAt } : {};
+      const base = computeMetrics(points, events, opts);
       setMetrics({
         ...base,
         currentPaceSPerKm: currentPaceSPerKm(points),
         autoPaused: isAutoPausedNow(points),
-        points: filterPoints(points),
+        points: routePoints(points, events, opts),
       });
     };
 

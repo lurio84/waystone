@@ -8,9 +8,9 @@ import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { filterPoints } from '@/core/geo';
 import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
-import { deleteRun, getPoints, getRun, getSplits } from '@/db/runs';
+import { routePoints } from '@/core/metrics';
+import { deleteRun, getEvents, getPoints, getRun, getSplits } from '@/db/runs';
 import { useTheme } from '@/hooks/use-theme';
 import { exportRunGpx, exportRunJson } from '@/export/export-run';
 
@@ -23,7 +23,14 @@ export default function RunDetailScreen() {
 
   const run = useMemo(() => getRun(runId), [runId]);
   const splits = useMemo(() => getSplits(runId), [runId]);
-  const routePoints = useMemo(() => filterPoints(getPoints(runId)), [runId]);
+  const route = useMemo(
+    () =>
+      routePoints(getPoints(runId), getEvents(runId), {
+        startedAt: run?.startedAt,
+        endedAt: run?.endedAt ?? undefined,
+      }),
+    [runId, run?.startedAt, run?.endedAt],
+  );
 
   if (!run) {
     return (
@@ -66,8 +73,8 @@ export default function RunDetailScreen() {
             {formatDateTime(run.startedAt)}
           </ThemedText>
 
-          {routePoints.length >= 2 && (
-            <RouteMap points={routePoints} style={styles.map} />
+          {route.length >= 2 && (
+            <RouteMap points={route} style={styles.map} />
           )}
 
           <StonePanel style={styles.summary}>

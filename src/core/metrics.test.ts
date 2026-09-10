@@ -5,7 +5,9 @@ import {
   manualPauseIntervals,
   mergeIntervals,
   pausedMsWithin,
+  routePoints,
 } from './metrics';
+import { filterPoints } from './geo';
 import { synthWalk } from './testutils';
 import type { RunEvent } from './types';
 
@@ -210,6 +212,46 @@ describe('computeMetrics', () => {
       expect(m.elapsedTimeS).toBeCloseTo(300, 0);
       expect(m.distanceM).toBeGreaterThan(890);
     });
+  });
+});
+
+describe('routePoints', () => {
+  it('un rato parado NO entra en la traza', () => {
+    const startTs = 1_000_000_000_000;
+    const pts = synthWalk(
+      [
+        { seconds: 120, speedMs: 3 }, // corriendo
+        { seconds: 120, speedMs: 0 }, // parado en un semáforo
+        { seconds: 120, speedMs: 3 }, // corriendo
+      ],
+      { startTs },
+    );
+    const route = routePoints(pts, []);
+    const all = filterPoints(pts);
+    // la parada (~120 s) sale de la traza; los dos tramos en marcha se quedan
+    expect(route.length).toBeLessThan(all.length - 90);
+    expect(route.length).toBeGreaterThan(200);
+    // ningún punto de la traza cae en la ventana de la parada
+    const pausaIni = startTs + 130_000;
+    const pausaFin = startTs + 230_000;
+    expect(route.some((p) => p.ts > pausaIni && p.ts < pausaFin)).toBe(false);
+  });
+
+  it('corriendo sin pausas: la traza son todos los puntos usables', () => {
+    const pts = synthWalk([{ seconds: 200, speedMs: 3 }]);
+    expect(routePoints(pts, [])).toHaveLength(filterPoints(pts).length);
+  });
+
+  it('descarta el punto fantasma con startedAt', () => {
+    const startTs = 1_000_000_000_000;
+    const phantom = { ts: startTs - 300_000, lat: 37.388, lon: -5.98, altitude: 100, accuracy: 5, speed: 0 };
+    const pts = [phantom, ...synthWalk([{ seconds: 100, speedMs: 3 }], { startTs })];
+    const route = routePoints(pts, [], { startedAt: startTs });
+    expect(route.every((p) => p.ts >= startTs)).toBe(true);
+  });
+
+  it('sin puntos usables → traza vacía', () => {
+    expect(routePoints([], [])).toEqual([]);
   });
 });
 
