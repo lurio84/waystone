@@ -126,6 +126,20 @@ export function listRuns(limit = 50): RunRow[] {
 }
 
 /**
+ * TODAS las carreras terminadas, más antigua primero. Sin límite: la
+ * progresión (XP acumulada, runa "centenario", rachas) necesita el historial
+ * completo, no una página.
+ */
+export function listAllRuns(): RunRow[] {
+  return getDb()
+    .select()
+    .from(runs)
+    .where(eq(runs.status, 'finished'))
+    .orderBy(runs.startedAt)
+    .all();
+}
+
+/**
  * Recalcula métricas y parciales desde los puntos crudos y refresca la caché
  * (fila de `runs` + filas de `splits`). Seguro de llamar en cualquier momento.
  */
