@@ -110,6 +110,13 @@ export default function HomeScreen() {
               <ThemedText
                 type="link"
                 themeColor="textSecondary"
+                onPress={() => router.push('/profile')}
+              >
+                Perfil
+              </ThemedText>
+              <ThemedText
+                type="link"
+                themeColor="textSecondary"
                 onPress={() => router.push('/settings')}
               >
                 Ajustes

@@ -1,8 +1,22 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { computeMetrics, computeSplits } from '@/core/metrics';
-import type { RawPoint, RunEvent } from '@/core/types';
+import type { RawPoint, RunEvent, RunSummary } from '@/core/types';
 import { getDb } from './client';
 import { points, runEvents, runs, splits, type RunRow, type SplitRow } from './schema';
+
+/**
+ * Mapea la fila cacheada de `runs` al resumen que consume `src/core`
+ * (progresión y runas). `src/core` no conoce Drizzle.
+ */
+export function runRowToSummary(r: RunRow): RunSummary {
+  return {
+    id: r.id,
+    startedAt: r.startedAt,
+    distanceM: r.distanceM,
+    movingTimeS: r.movingTimeS,
+    elevGainM: r.elevGainM,
+  };
+}
 
 function pointRowToRaw(r: {
   ts: number;

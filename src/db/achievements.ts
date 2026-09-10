@@ -8,19 +8,9 @@
  * es la garantía (no se puede testear con jest por expo-sqlite).
  */
 import { evaluateRunes, type RuneUnlock } from '@/core/runes';
-import type { RunSummary } from '@/core/types';
 import { getDb } from './client';
+import { runRowToSummary } from './runs';
 import { achievements, type RunRow } from './schema';
-
-function toSummary(r: RunRow): RunSummary {
-  return {
-    id: r.id,
-    startedAt: r.startedAt,
-    distanceM: r.distanceM,
-    movingTimeS: r.movingTimeS,
-    elevGainM: r.elevGainM,
-  };
-}
 
 /** Runas ya desbloqueadas, tal cual están en la BD. */
 export function getUnlockedAchievements(): RuneUnlock[] {
@@ -41,7 +31,7 @@ export function getUnlockedAchievements(): RuneUnlock[] {
  * no pisa a la primera.
  */
 export function syncAchievements(finishedRuns: RunRow[]): RuneUnlock[] {
-  const earned = evaluateRunes(finishedRuns.map(toSummary));
+  const earned = evaluateRunes(finishedRuns.map(runRowToSummary));
   if (earned.length === 0) return [];
 
   const db = getDb();
