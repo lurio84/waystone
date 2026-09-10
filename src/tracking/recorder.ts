@@ -3,12 +3,14 @@ import Constants from 'expo-constants';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Location from 'expo-location';
 import { AppState, PermissionsAndroid, Platform } from 'react-native';
+import { syncAchievements } from '@/db/achievements';
 import {
   addManualEvent,
   discardEmptyActiveRun,
   finishRun,
   getActiveRun,
   getLastPointTs,
+  listAllRuns,
   startRun,
 } from '@/db/runs';
 import { LOCATION_TASK } from './locationTask';
@@ -130,6 +132,13 @@ export async function stopRecording(): Promise<number | null> {
   }
   if (!active) return null;
   finishRun(active.id);
+  // Persiste las runas que esta carrera haya desbloqueado. Best-effort: si
+  // falla, la próxima carrera (o la pantalla de perfil al montar) reintenta.
+  try {
+    syncAchievements(listAllRuns());
+  } catch {
+    // no bloquear el cierre de la carrera por esto
+  }
   return active.id;
 }
 

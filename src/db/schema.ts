@@ -50,7 +50,19 @@ export const splits = sqliteTable('splits', {
   elevGainM: real('elev_gain_m').notNull(),
 });
 
+/**
+ * Runa desbloqueada. APPEND-ONLY, como una pausa manual: se inserta una vez y
+ * NUNCA se actualiza ni recalcula. `id` = id de la runa en `src/core/runes.ts`.
+ * Tabla creada por la migración v3.
+ */
+export const achievements = sqliteTable('achievements', {
+  id: text('id').primaryKey(),
+  unlockedAt: integer('unlocked_at').notNull(),
+  runId: integer('run_id').notNull(),
+});
+
 export type RunRow = typeof runs.$inferSelect;
 export type PointRow = typeof points.$inferSelect;
 export type RunEventRow = typeof runEvents.$inferSelect;
 export type SplitRow = typeof splits.$inferSelect;
+export type AchievementRow = typeof achievements.$inferSelect;
