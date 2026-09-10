@@ -2,9 +2,10 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync, type SQLiteDatabase } from 'expo-sqlite';
 import * as schema from './schema';
 
-// NO renombrar este fichero aunque cambie el nombre del proyecto: cambiarlo
-// huérfana la BD que ya existe en el móvil (carreras perdidas). Es interno.
-const DB_NAME = 'zancada.db';
+// Nombre del fichero de BD. A partir del rename a `com.lurio.waystone` (paquete
+// nuevo = sandbox nuevo = sin BD previa que huérfanar) queda CONGELADO: cambiarlo
+// después huérfana las carreras que ya haya en el móvil. Es interno, no visible.
+const DB_NAME = 'waystone.db';
 
 /** Versión del esquema. Subir al añadir una migración en `SCHEMA_SQL`. */
 const SCHEMA_VERSION = 1;

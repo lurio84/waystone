@@ -4,7 +4,7 @@ import type { RawPoint } from '@/core/types';
 import { initSchema } from '@/db/client';
 import { getActiveRun, insertPoints } from '@/db/runs';
 
-export const LOCATION_TASK = 'zancada-location-updates';
+export const LOCATION_TASK = 'waystone-location-updates';
 
 /**
  * Tarea de background. Se ejecuta en un contexto frágil (la app puede estar

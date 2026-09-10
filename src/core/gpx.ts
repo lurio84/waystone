@@ -40,7 +40,7 @@ export function buildGpx(points: RawPoint[], meta: GpxMeta): string {
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Zancada" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Waystone" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${escapeXml(meta.name)}</name>
     <time>${new Date(meta.startedAt).toISOString()}</time>

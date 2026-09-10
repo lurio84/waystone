@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Waystone",
-    "slug": "Zancada",
+    "slug": "waystone",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "zancada",
+    "scheme": "waystone",
     "userInterfaceStyle": "dark",
     "platforms": [
       "android",
@@ -15,7 +15,7 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
-      "package": "com.lurio.zancada",
+      "package": "com.lurio.waystone",
       "adaptiveIcon": {
         "backgroundColor": "#161B1E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

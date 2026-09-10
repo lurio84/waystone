@@ -17,6 +17,6 @@ export const useSettings = create<SettingsState>()(
       liveMap: false,
       setLiveMap: (liveMap) => set({ liveMap }),
     }),
-    { name: 'zancada.settings', storage: createJSONStorage(() => AsyncStorage) },
+    { name: 'waystone.settings', storage: createJSONStorage(() => AsyncStorage) },
   ),
 );

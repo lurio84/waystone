@@ -3,7 +3,7 @@
  * escupe el veredicto sobre el P0: ¿aguantó la grabación con la pantalla
  * apagada, o el sistema la estranguló / mató a media?
  *
- *   npm run analyze -- ruta/al/zancada-2026-09-10-21-30.json
+ *   npm run analyze -- ruta/al/waystone-2026-09-10-21-30.json
  *
  * Reusa `src/core` a propósito: lo que calcula este script y lo que muestra
  * la app salen de las MISMAS funciones. Si el APK del móvil es anterior a los

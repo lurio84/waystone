@@ -32,13 +32,13 @@ const LOCATION_OPTIONS: Location.LocationTaskOptions = {
 /** Si el último punto es más viejo que esto, la tarea se considera caída. */
 const STALE_POINT_MS = 30_000;
 
-const BATTERY_EXEMPTION_ASKED = 'zancada.batteryExemptionAsked';
+const BATTERY_EXEMPTION_ASKED = 'waystone.batteryExemptionAsked';
 
 /** Package id real en runtime — así el rename del proyecto no rompe el intent. */
 const PACKAGE_ID =
   Constants.expoConfig?.android?.package ??
   (Constants as { platform?: { android?: { package?: string } } }).platform?.android?.package ??
-  'com.lurio.zancada';
+  'com.lurio.waystone';
 
 export type PermissionResult = 'granted' | 'foreground-only' | 'denied';
 

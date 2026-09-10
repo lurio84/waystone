@@ -42,7 +42,7 @@ export default function HomeScreen() {
       if (perm === 'denied') {
         Alert.alert(
           'Permiso de ubicación',
-          'Zancada necesita acceso a la ubicación para grabar la carrera.',
+          'Waystone necesita acceso a la ubicación para grabar la carrera.',
         );
         return;
       }

@@ -29,7 +29,7 @@ export async function exportRunGpx(runId: number): Promise<void> {
     name: `Carrera ${formatDateTime(run.startedAt)}`,
     startedAt: run.startedAt,
   });
-  await writeAndShare(`zancada-${slug(run.startedAt)}.gpx`, gpx, 'application/gpx+xml');
+  await writeAndShare(`waystone-${slug(run.startedAt)}.gpx`, gpx, 'application/gpx+xml');
 }
 
 /** Dump JSON completo, puntos crudos incluidos: por si quiero mis datos enteros. */
@@ -44,7 +44,7 @@ export async function exportRunJson(runId: number): Promise<void> {
     exportedAt: Date.now(),
   };
   await writeAndShare(
-    `zancada-${slug(run.startedAt)}.json`,
+    `waystone-${slug(run.startedAt)}.json`,
     JSON.stringify(payload, null, 2),
     'application/json',
   );
