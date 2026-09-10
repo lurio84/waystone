@@ -37,7 +37,11 @@ const EMPTY: LiveMetrics = {
  * largo esto calienta. Si molesta: cachear métricas incrementalmente en vez
  * de recalcular desde cero. No tocar hasta medirlo en el móvil.
  */
-export function useLiveMetrics(runId: number | null, intervalMs = 2000): LiveMetrics {
+export function useLiveMetrics(
+  runId: number | null,
+  startedAt: number | null,
+  intervalMs = 2000,
+): LiveMetrics {
   const [metrics, setMetrics] = useState<LiveMetrics>(EMPTY);
 
   useEffect(() => {
@@ -48,7 +52,10 @@ export function useLiveMetrics(runId: number | null, intervalMs = 2000): LiveMet
       if (cancelled) return;
       const points = getPoints(runId);
       const events = getEvents(runId);
-      const base = computeMetrics(points, events);
+      // startedAt (sin endedAt, la carrera está viva): descarta el punto
+      // fantasma del arranque para que "En movimiento" y "Ritmo medio" no
+      // salgan inflados. El cronómetro "Tiempo" ya es reloj de pared aparte.
+      const base = computeMetrics(points, events, startedAt != null ? { startedAt } : {});
       setMetrics({
         ...base,
         currentPaceSPerKm: currentPaceSPerKm(points),
@@ -64,7 +71,7 @@ export function useLiveMetrics(runId: number | null, intervalMs = 2000): LiveMet
       clearTimeout(prime);
       clearInterval(id);
     };
-  }, [runId, intervalMs]);
+  }, [runId, startedAt, intervalMs]);
 
   return metrics;
 }

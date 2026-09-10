@@ -24,7 +24,7 @@ export default function RecordScreen() {
   const theme = useTheme();
   const router = useRouter();
   const session = useSession();
-  const metrics = useLiveMetrics(session.runId);
+  const metrics = useLiveMetrics(session.runId, session.startedAt);
   const liveMap = useSettings((s) => s.liveMap);
 
   // Cronómetro de pared, independiente del muestreo del GPS.

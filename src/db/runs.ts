@@ -126,11 +126,17 @@ export function listRuns(limit = 50): RunRow[] {
  */
 export function recalcRun(runId: number): void {
   const db = getDb();
+  const run = getRun(runId);
+  if (!run) return;
   const pts = getPoints(runId);
   const evts = getEvents(runId);
 
-  const m = computeMetrics(pts, evts);
-  const s = computeSplits(pts, evts);
+  // La ventana temporal sale del reloj de la carrera, no de los timestamps de
+  // los puntos: descarta el punto fantasma del arranque y, si el P0 mató la
+  // grabación, acota el "Terminar" (pulsado al llegar a casa) al último fix.
+  const opts = { startedAt: run.startedAt, endedAt: run.endedAt ?? undefined };
+  const m = computeMetrics(pts, evts, opts);
+  const s = computeSplits(pts, evts, 1000, opts);
 
   db.update(runs)
     .set({

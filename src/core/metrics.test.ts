@@ -119,6 +119,59 @@ describe('computeMetrics', () => {
     expect(m.distanceM).toBeLessThan(50);
     expect(m.avgPaceSPerKm).toBe(0);
   });
+
+  describe('ventana temporal desde el reloj de la carrera (startedAt/endedAt)', () => {
+    const startTs = 1_000_000_000_000;
+
+    // punto fantasma: expo-location entrega la última ubicación conocida como
+    // primer punto, con su ts original (aquí −483 s) y a ~120 m del inicio real
+    const phantom = {
+      ts: startTs - 483_000,
+      lat: 37.388,
+      lon: -5.9845,
+      altitude: 100,
+      accuracy: 5,
+      speed: 0,
+    };
+
+    it('sin startedAt reproduce el bug: el punto fantasma infla elapsed', () => {
+      const pts = [phantom, ...synthWalk([{ seconds: 300, speedMs: 3 }], { startTs })];
+      const m = computeMetrics(pts, []);
+      // 300 s reales + 483 s de desfase del fantasma
+      expect(m.elapsedTimeS).toBeGreaterThan(700);
+    });
+
+    it('con startedAt descarta el fantasma: elapsed y distancia reales', () => {
+      const pts = [phantom, ...synthWalk([{ seconds: 300, speedMs: 3 }], { startTs })];
+      const m = computeMetrics(pts, [], { startedAt: startTs });
+      expect(m.elapsedTimeS).toBeCloseTo(300, 0);
+      // sin el salto de ~120 m desde el punto cacheado
+      expect(m.distanceM).toBeGreaterThan(890);
+      expect(m.distanceM).toBeLessThan(910);
+    });
+
+    it('carrera limpia: endedAt unos segundos tras el último punto → elapsed real', () => {
+      const pts = synthWalk([{ seconds: 300, speedMs: 3 }], { startTs });
+      const m = computeMetrics(pts, [], { startedAt: startTs, endedAt: startTs + 305_000 });
+      expect(m.elapsedTimeS).toBeCloseTo(300, 0);
+    });
+
+    it('carrera matada a min 17 y terminada a min 75 → elapsed ≈ 17 min, no 75', () => {
+      const pts = synthWalk([{ seconds: 17 * 60, speedMs: 3 }], { startTs });
+      const m = computeMetrics(pts, [], {
+        startedAt: startTs,
+        endedAt: startTs + 75 * 60_000,
+      });
+      expect(m.elapsedTimeS).toBeCloseTo(17 * 60, 0);
+    });
+
+    it('startedAt sin endedAt (carrera en vivo) no rompe', () => {
+      const pts = synthWalk([{ seconds: 300, speedMs: 3 }], { startTs });
+      const m = computeMetrics(pts, [], { startedAt: startTs });
+      expect(m.elapsedTimeS).toBeCloseTo(300, 0);
+      expect(m.distanceM).toBeGreaterThan(890);
+    });
+  });
 });
 
 describe('computeSplits', () => {

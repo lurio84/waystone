@@ -99,6 +99,32 @@ export function allPauses(
 
 export interface MetricsOptions {
   autopause?: AutoPauseOptions;
+  /** epoch ms del inicio real de la carrera (columna `runs.started_at`). */
+  startedAt?: number;
+  /** epoch ms del "Terminar" (columna `runs.ended_at`). */
+  endedAt?: number;
+}
+
+/**
+ * Descarta el punto fantasma del arranque: expo-location entrega como primer
+ * punto la última ubicación conocida, con su timestamp ORIGINAL (se han visto
+ * −483 s y −565 s antes de `startedAt`). Sin filtrarlo, la ventana temporal se
+ * deriva de ese ts viejo e infla el tiempo transcurrido.
+ */
+function trimPreStart(points: RawPoint[], startedAt: number | undefined): RawPoint[] {
+  if (startedAt == null) return points;
+  return points.filter((p) => p.ts >= startedAt);
+}
+
+/**
+ * Instante de fin de la carrera para el cálculo de la ventana temporal:
+ * el "Terminar" acotado al último punto real. Si el P0 mató la grabación a
+ * media y el usuario pulsa Terminar al llegar a casa, `endedAt` está 30-60 min
+ * por delante del último fix — sin el clamp eso infla el tiempo. Con él, una
+ * carrera limpia da el tiempo real y una matada da el tiempo hasta que murió.
+ */
+function boundedEndTs(lastPointTs: number, endedAt: number | undefined): number {
+  return endedAt != null ? Math.min(endedAt, lastPointTs) : lastPointTs;
 }
 
 /** Métricas agregadas de una carrera a partir de sus puntos crudos y eventos. */
@@ -114,14 +140,16 @@ export function computeMetrics(
     avgPaceSPerKm: 0,
     elevGainM: 0,
   };
-  if (points.length < 2) return empty;
 
-  const startTs = points[0].ts;
-  const endTs = points[points.length - 1].ts;
-  const elapsedMs = endTs - startTs;
+  const pts = trimPreStart(points, opts.startedAt);
+  if (pts.length < 2) return empty;
 
-  const filtered = filterPoints(points);
-  const pauses = allPauses(points, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
+  const startTs = opts.startedAt ?? pts[0].ts;
+  const endTs = boundedEndTs(pts[pts.length - 1].ts, opts.endedAt);
+  const elapsedMs = Math.max(0, endTs - startTs);
+
+  const filtered = filterPoints(pts);
+  const pauses = allPauses(pts, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
 
   const distanceM = movingDistanceMeters(filtered, pauses);
   const elevGainM = elevationGainMeters(filtered);
@@ -153,11 +181,16 @@ export function computeSplits(
   splitMeters = 1000,
   opts: MetricsOptions = {},
 ): Split[] {
-  const filtered = filterPoints(points);
+  // Se recorta el punto fantasma igual que en computeMetrics, pero los
+  // parciales siguen anclados a timestamps de puntos (no a `startedAt`): así
+  // el km 1 no carga con los segundos de adquisición del primer fix.
+  const pts = trimPreStart(points, opts.startedAt);
+  const filtered = filterPoints(pts);
   if (filtered.length < 2) return [];
 
-  const endTs = points.length ? points[points.length - 1].ts : filtered[filtered.length - 1].ts;
-  const pauses = allPauses(points, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
+  const lastTs = pts.length ? pts[pts.length - 1].ts : filtered[filtered.length - 1].ts;
+  const endTs = boundedEndTs(lastTs, opts.endedAt);
+  const pauses = allPauses(pts, events, endTs, opts.autopause ?? DEFAULT_AUTOPAUSE);
 
   const splits: Split[] = [];
   let cumDist = 0;
