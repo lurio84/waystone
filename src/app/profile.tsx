@@ -69,10 +69,10 @@ export default function ProfileScreen() {
 
   const { level, streak, runCount, unlocked } = data;
 
-  // Anima la barra al valor actual, y el pulso ámbar solo si el nivel ha
-  // subido desde la última vez. Va en un efecto propio (no en `useFocusEffect`)
-  // porque el compilador de React no deja mutar un shared value dentro del
-  // `useCallback` de un hook.
+  // La barra crece hasta su valor. Efecto propio (no en `useFocusEffect`: el
+  // compilador de React no deja mutar un shared value en el `useCallback` de un
+  // hook) y con SOLO `level.progress` en deps — si `markLevelSeen` estuviera
+  // aquí, el pulso reiniciaría la barra a media animación.
   useEffect(() => {
     fill.value = 0;
     fill.value = withTiming(level.progress, {
@@ -80,7 +80,12 @@ export default function ProfileScreen() {
       easing: Easing.out(Easing.cubic),
       reduceMotion: ReduceMotion.System,
     });
+  }, [level.progress, fill]);
 
+  // Pulso ámbar solo si el nivel ha subido desde la última vez que se vio el
+  // perfil. Al marcarlo visto `lastSeenLevel` cambia y el efecto re-corre, pero
+  // ya no cumple la condición → no repite.
+  useEffect(() => {
     if (level.level > lastSeenLevel) {
       glow.value = withSequence(
         withTiming(1, { duration: 200, reduceMotion: ReduceMotion.System }),
@@ -90,7 +95,7 @@ export default function ProfileScreen() {
       );
       markLevelSeen(level.level);
     }
-  }, [level.progress, level.level, lastSeenLevel, markLevelSeen, fill, glow]);
+  }, [level.level, lastSeenLevel, markLevelSeen, glow]);
 
   const fillStyle = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * 0.16 }));
