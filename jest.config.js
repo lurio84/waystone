@@ -5,7 +5,13 @@
  */
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/src/core/**/*.test.ts', '<rootDir>/src/dev/**/*.test.ts'],
+  testMatch: [
+    '<rootDir>/src/core/**/*.test.ts',
+    '<rootDir>/src/dev/**/*.test.ts',
+    // Solo lógica pura de la capa de datos (p. ej. `pendingMigrations`), no
+    // tests que importen expo-sqlite — para eso haría falta el preset jest-expo.
+    '<rootDir>/src/db/**/*.test.ts',
+  ],
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
   transform: {
     '^.+\\.[jt]sx?$': ['babel-jest', { caller: { platform: 'node' } }],

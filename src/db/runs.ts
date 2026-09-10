@@ -47,6 +47,10 @@ export function startRun(now = Date.now()): number {
  * En background Android entrega los puntos a ráfagas (tras un doze pueden
  * llegar cientos de golpe), así que se trocea para no pasarse del límite de
  * variables de SQLite (999 / 7 columnas ≈ 140 filas).
+ *
+ * `onConflictDoNothing`: Android reentrega ráfagas tras un doze. El índice
+ * único `(run_id, ts)` (migración v2) las rechaza; sin esto, el insert
+ * entero abortaría con UNIQUE constraint. El conflicto se resuelve por fila.
  */
 const INSERT_CHUNK = 100;
 
@@ -57,6 +61,7 @@ export function insertPoints(runId: number, pts: RawPoint[]): void {
     const chunk = pts.slice(i, i + INSERT_CHUNK);
     db.insert(points)
       .values(chunk.map((p) => ({ runId, ...p })))
+      .onConflictDoNothing()
       .run();
   }
 }

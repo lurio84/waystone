@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync, type SQLiteDatabase } from 'expo-sqlite';
+import { runMigrations } from './migrations';
 import * as schema from './schema';
 
 // Nombre del fichero de BD. A partir del rename a `com.lurio.waystone` (paquete
@@ -7,9 +8,9 @@ import * as schema from './schema';
 // después huérfana las carreras que ya haya en el móvil. Es interno, no visible.
 const DB_NAME = 'waystone.db';
 
-/** Versión del esquema. Subir al añadir una migración en `SCHEMA_SQL`. */
-const SCHEMA_VERSION = 1;
-
+// Bootstrap de una BD nueva. NO se toca nunca más: todo cambio de esquema
+// posterior es un paso en `migrations.ts`. Un fresh install crea estas tablas,
+// lee `user_version` (0 ≡ 1) y aplica las migraciones — un solo code path.
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,11 +72,20 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   return _db;
 }
 
-/** Crea las tablas si no existen. Idempotente; llamar una vez al arrancar. */
+let _migrated = false;
+
+/**
+ * Crea las tablas si no existen y aplica las migraciones pendientes.
+ * Idempotente. Se llama desde el arranque de la app (`_layout`) Y desde la
+ * tarea headless de GPS (`locationTask`): el guard evita que un cold-start y
+ * la tarea de background corran el runner a la vez.
+ */
 export function initSchema(): void {
+  if (_migrated) return;
   const db = sqlite();
   db.execSync(SCHEMA_SQL);
-  db.execSync(`PRAGMA user_version = ${SCHEMA_VERSION};`);
+  runMigrations(db);
+  _migrated = true;
 }
 
 export { schema };
