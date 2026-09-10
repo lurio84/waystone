@@ -10,7 +10,7 @@ import { Spacing } from '@/constants/theme';
 import { formatDateTime } from '@/core/format';
 import { dayStreak, levelForXp, totalXp, type LevelProgress } from '@/core/progress';
 import { RUNES } from '@/core/runes';
-import { getUnlockedAchievements } from '@/db/achievements';
+import { getUnlockedAchievements, syncAchievements } from '@/db/achievements';
 import { listAllRuns, runRowToSummary } from '@/db/runs';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -37,7 +37,19 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const [data, setData] = useState<ProfileData>(load);
 
-  useFocusEffect(useCallback(() => setData(load()), []));
+  useFocusEffect(
+    useCallback(() => {
+      // Reintento del sync: si una carrera se cerró con una versión sin
+      // `syncAchievements` (o el best-effort de `stopRecording` falló), aquí
+      // se persisten las runas que le tocaban. Append-only e idempotente.
+      try {
+        syncAchievements(listAllRuns());
+      } catch {
+        // pintar el perfil aunque el sync falle
+      }
+      setData(load());
+    }, []),
+  );
 
   const { level, streak, runCount, unlocked } = data;
   const xpLine =
