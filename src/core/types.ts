@@ -46,3 +46,17 @@ export interface RunMetrics {
   avgPaceSPerKm: number;
   elevGainM: number;
 }
+
+/**
+ * Lo que la progresión (XP, niveles, rachas, runas) necesita de una carrera
+ * ya terminada. La capa de datos mapea `RunRow → RunSummary`; `src/core` no
+ * conoce Drizzle. `id` es el de la fila `runs` — las runas lo persisten.
+ */
+export interface RunSummary {
+  id: number;
+  /** epoch ms del inicio */
+  startedAt: number;
+  distanceM: number;
+  movingTimeS: number;
+  elevGainM: number;
+}
