@@ -20,7 +20,7 @@ export interface RuneUnlock {
   unlockedAt: number;
 }
 
-interface RuneDef {
+export interface RuneDef {
   id: string;
   titulo: string;
   descripcion: string;
@@ -124,4 +124,25 @@ export function evaluateRunes(runs: RunSummary[]): RuneUnlock[] {
     if (run) unlocks.push({ id: rune.id, runId: run.id, unlockedAt: run.startedAt });
   }
   return unlocks;
+}
+
+/**
+ * De entre las runas ya persistidas, las que ganó ESTA carrera — para que el
+ * detalle las muestre. Derivado, no un canal efímero: abrir la carrera dos
+ * veces da lo mismo, y sobrevive a que el proceso muera tras cerrarla.
+ *
+ * Cruza `runId` Y `unlockedAt`: `evaluateRunes` fija `unlockedAt` al `startedAt`
+ * de la carrera que la ganó, así que una fila cuyo `runId` coincide pero cuyo
+ * `unlockedAt` no es de otra carrera (p. ej. una borrada) y no se muestra.
+ * Devuelve en el orden del catálogo, no en el de la lista de entrada.
+ */
+export function runesForRun(
+  unlocked: RuneUnlock[],
+  runId: number,
+  startedAt: number,
+): RuneDef[] {
+  const ids = new Set(
+    unlocked.filter((u) => u.runId === runId && u.unlockedAt === startedAt).map((u) => u.id),
+  );
+  return RUNES.filter((r) => ids.has(r.id));
 }

@@ -1,6 +1,14 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import Animated, {
+  Easing,
+  ReduceMotion,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StonePanel } from '@/components/stone-panel';
@@ -13,6 +21,7 @@ import { RUNES } from '@/core/runes';
 import { getUnlockedAchievements, syncAchievements } from '@/db/achievements';
 import { listAllRuns, runRowToSummary } from '@/db/runs';
 import { useTheme } from '@/hooks/use-theme';
+import { useProgressSeen } from '@/store/progress-seen';
 
 interface ProfileData {
   level: LevelProgress;
@@ -36,6 +45,13 @@ function load(): ProfileData {
 export default function ProfileScreen() {
   const theme = useTheme();
   const [data, setData] = useState<ProfileData>(load);
+  const lastSeenLevel = useProgressSeen((s) => s.lastSeenLevel);
+  const markLevelSeen = useProgressSeen((s) => s.markLevelSeen);
+
+  // La barra de XP crece desde 0 al entrar; el pulso ámbar solo si el nivel
+  // ha subido desde la última vez que se vio el perfil.
+  const fill = useSharedValue(0);
+  const glow = useSharedValue(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -52,6 +68,32 @@ export default function ProfileScreen() {
   );
 
   const { level, streak, runCount, unlocked } = data;
+
+  // Anima la barra al valor actual, y el pulso ámbar solo si el nivel ha
+  // subido desde la última vez. Va en un efecto propio (no en `useFocusEffect`)
+  // porque el compilador de React no deja mutar un shared value dentro del
+  // `useCallback` de un hook.
+  useEffect(() => {
+    fill.value = 0;
+    fill.value = withTiming(level.progress, {
+      duration: 650,
+      easing: Easing.out(Easing.cubic),
+      reduceMotion: ReduceMotion.System,
+    });
+
+    if (level.level > lastSeenLevel) {
+      glow.value = withSequence(
+        withTiming(1, { duration: 200, reduceMotion: ReduceMotion.System }),
+        withTiming(0, { duration: 550, reduceMotion: ReduceMotion.System }),
+        withTiming(1, { duration: 200, reduceMotion: ReduceMotion.System }),
+        withTiming(0, { duration: 650, reduceMotion: ReduceMotion.System }),
+      );
+      markLevelSeen(level.level);
+    }
+  }, [level.progress, level.level, lastSeenLevel, markLevelSeen, fill, glow]);
+
+  const fillStyle = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * 0.16 }));
   const xpLine =
     level.xpAtNextLevel == null
       ? `${level.totalXp} XP · nivel máximo`
@@ -61,26 +103,29 @@ export default function ProfileScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safe} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <StonePanel style={styles.levelPanel}>
-            <ThemedText type="inscription" themeColor="textSecondary">
-              Nivel {level.level}
-            </ThemedText>
-            <ThemedText type="inscription" style={styles.levelName}>
-              {level.name}
-            </ThemedText>
+          <View>
+            <StonePanel style={styles.levelPanel}>
+              <ThemedText type="inscription" themeColor="textSecondary">
+                Nivel {level.level}
+              </ThemedText>
+              <ThemedText type="inscription" style={styles.levelName}>
+                {level.name}
+              </ThemedText>
 
-            <View style={[styles.track, { backgroundColor: theme.background }]}>
-              <View
-                style={[
-                  styles.fill,
-                  { backgroundColor: theme.primary, width: `${Math.round(level.progress * 100)}%` },
-                ]}
-              />
-            </View>
-            <ThemedText type="small" themeColor="textSecondary">
-              {xpLine}
-            </ThemedText>
-          </StonePanel>
+              <View style={[styles.track, { backgroundColor: theme.background }]}>
+                <Animated.View
+                  style={[styles.fill, { backgroundColor: theme.primary }, fillStyle]}
+                />
+              </View>
+              <ThemedText type="small" themeColor="textSecondary">
+                {xpLine}
+              </ThemedText>
+            </StonePanel>
+            <Animated.View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, { backgroundColor: theme.warn }, glowStyle]}
+            />
+          </View>
 
           <View style={styles.factRow}>
             <Fact value={String(streak)} label={streak === 1 ? 'día de racha' : 'días de racha'} />

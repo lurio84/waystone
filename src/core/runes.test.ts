@@ -1,4 +1,4 @@
-import { RUNES, evaluateRunes } from './runes';
+import { RUNES, evaluateRunes, runesForRun, type RuneUnlock } from './runes';
 import type { RunSummary } from './types';
 
 function run(partial: Partial<RunSummary> & { id: number }): RunSummary {
@@ -108,5 +108,43 @@ describe('evaluateRunes', () => {
   it('todos los ids del catálogo son únicos', () => {
     const ids = RUNES.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe('runesForRun', () => {
+  const t = new Date(2026, 0, 15, 12, 0, 0).getTime();
+  const unlock = (id: string, runId: number, unlockedAt: number): RuneUnlock => ({
+    id,
+    runId,
+    unlockedAt,
+  });
+
+  it('devuelve la definición de la runa que desbloqueó esta carrera', () => {
+    const got = runesForRun([unlock('primer-mojon', 4, t)], 4, t);
+    expect(got.map((r) => r.id)).toEqual(['primer-mojon']);
+    expect(got[0].titulo).toBe('Primer mojón');
+  });
+
+  it('devuelve varias runas si la carrera desbloqueó varias', () => {
+    const unlocked = [unlock('primer-mojon', 4, t), unlock('cinco-k', 4, t)];
+    expect(runesForRun(unlocked, 4, t).map((r) => r.id)).toEqual(['primer-mojon', 'cinco-k']);
+  });
+
+  it('respeta el orden del catálogo, no el de la lista persistida', () => {
+    const unlocked = [unlock('cinco-k', 4, t), unlock('primer-mojon', 4, t)];
+    expect(runesForRun(unlocked, 4, t).map((r) => r.id)).toEqual(['primer-mojon', 'cinco-k']);
+  });
+
+  it('no devuelve nada si la carrera no desbloqueó ninguna', () => {
+    expect(runesForRun([unlock('primer-mojon', 4, t)], 9, t)).toEqual([]);
+  });
+
+  it('descarta una fila con el mismo runId pero otro startedAt (carrera borrada, id no reusado)', () => {
+    // `evaluateRunes` garantiza unlockedAt === startedAt de la carrera que la ganó.
+    expect(runesForRun([unlock('bajo-las-estrellas', 4, t - 1)], 4, t)).toEqual([]);
+  });
+
+  it('ignora un id de runa que ya no existe en el catálogo', () => {
+    expect(runesForRun([unlock('runa-fantasma', 4, t)], 4, t)).toEqual([]);
   });
 });
