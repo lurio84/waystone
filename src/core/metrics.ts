@@ -52,6 +52,20 @@ export function manualPauseIntervals(events: RunEvent[], runEndTs: number): Inte
   return intervals;
 }
 
+/**
+ * ¿La carrera está en pausa manual ahora mismo, según sus eventos? Gana el
+ * último evento. Sirve para reconstruir el status de la UI al montar: el store
+ * de sesión es efímero y tras un reinicio no sabe si se quedó en pausa.
+ */
+export function isPausedByEvents(events: RunEvent[]): boolean {
+  let paused = false;
+  for (const e of [...events].sort((a, b) => a.ts - b.ts)) {
+    if (e.kind === 'pause') paused = true;
+    else if (e.kind === 'resume') paused = false;
+  }
+  return paused;
+}
+
 /** Une intervalos solapados o contiguos en una lista mínima y ordenada. */
 export function mergeIntervals(intervals: Interval[]): Interval[] {
   if (intervals.length === 0) return [];

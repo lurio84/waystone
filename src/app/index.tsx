@@ -8,14 +8,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { formatDateTime, formatDuration, formatKm, formatPace } from '@/core/format';
-import { getActiveRun, listRuns } from '@/db/runs';
+import { isPausedByEvents } from '@/core/metrics';
+import { getActiveRun, getEvents, listRuns } from '@/db/runs';
 import type { RunRow } from '@/db/schema';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  requestBatteryExemptionOnce,
-  requestPermissions,
-  startRecording,
-} from '@/tracking/recorder';
+import { requestPermissions, startRecording } from '@/tracking/recorder';
 import { useSession } from '@/store/session';
 
 export default function HomeScreen() {
@@ -32,7 +29,8 @@ export default function HomeScreen() {
       const active = getActiveRun();
       setHasActive(!!active);
       if (active && useSession.getState().runId == null) {
-        beginSession(active.id, active.startedAt);
+        const paused = isPausedByEvents(getEvents(active.id));
+        beginSession(active.id, active.startedAt, paused ? 'paused' : 'recording');
       }
     }, [beginSession]),
   );
@@ -54,7 +52,6 @@ export default function HomeScreen() {
           'Sin el permiso "Permitir siempre" la grabación puede cortarse al apagar la pantalla. Puedes cambiarlo en Ajustes.',
         );
       }
-      await requestBatteryExemptionOnce();
       const runId = await startRecording();
       const active = getActiveRun();
       beginSession(runId, active?.startedAt ?? Date.now());

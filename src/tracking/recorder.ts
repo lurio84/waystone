@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Location from 'expo-location';
-import { AppState, Platform } from 'react-native';
+import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import {
   addManualEvent,
   discardEmptyActiveRun,
@@ -42,8 +42,25 @@ const PACKAGE_ID =
 
 export type PermissionResult = 'granted' | 'foreground-only' | 'denied';
 
+/**
+ * Permiso de notificaciones (Android 13+). Best-effort: sin él, la notificación
+ * del foreground service queda oculta, y un FGS `location` sin notificación
+ * visible es más fácil de matar por el OEM → empeora el P0. No bloquea grabar.
+ */
+async function requestNotificationPermission(): Promise<void> {
+  if (Platform.OS !== 'android' || Number(Platform.Version) < 33) return;
+  try {
+    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+  } catch {
+    // si la ROM no lo soporta, seguimos: es una mejora, no un requisito
+  }
+}
+
 /** Pide permiso de ubicación. El de background va DESPUÉS del normal, aparte. */
 export async function requestPermissions(): Promise<PermissionResult> {
+  // Antes de arrancar el FGS: en Android 13+ el permiso debe estar resuelto
+  // para que su notificación sea visible.
+  await requestNotificationPermission();
   const fg = await Location.requestForegroundPermissionsAsync();
   if (!fg.granted) return 'denied';
   const bg = await Location.requestBackgroundPermissionsAsync();
@@ -145,11 +162,13 @@ export async function ensureTracking(): Promise<boolean> {
   const active = getActiveRun();
   if (!active) return false;
 
-  const lastTs = getLastPointTs(active.id);
+  // Con 0 puntos el punto de referencia es el inicio de la carrera: si lleva
+  // > STALE_POINT_MS sin recibir NI el primer fix, algo va mal y hay que
+  // reenganchar (antes: null → nunca stale → una carrera sin fix no reenganchaba).
+  const lastTs = getLastPointTs(active.id) ?? active.startedAt;
   const running = await isTaskRunning();
-  const stale = lastTs != null && Date.now() - lastTs > STALE_POINT_MS;
+  const stale = Date.now() - lastTs > STALE_POINT_MS;
 
-  // Si consta corriendo y hay puntos frescos (o aún ninguno), no tocar nada.
   if (running && !stale) return false;
 
   await reattachUpdates();

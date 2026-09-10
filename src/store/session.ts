@@ -7,7 +7,7 @@ interface SessionState {
   status: SessionStatus;
   /** epoch ms en que arrancó la carrera, para el cronómetro de pantalla */
   startedAt: number | null;
-  begin: (runId: number, startedAt: number) => void;
+  begin: (runId: number, startedAt: number, status?: SessionStatus) => void;
   pause: () => void;
   resume: () => void;
   end: () => void;
@@ -22,7 +22,7 @@ export const useSession = create<SessionState>((set) => ({
   runId: null,
   status: 'idle',
   startedAt: null,
-  begin: (runId, startedAt) => set({ runId, startedAt, status: 'recording' }),
+  begin: (runId, startedAt, status = 'recording') => set({ runId, startedAt, status }),
   pause: () => set({ status: 'paused' }),
   resume: () => set({ status: 'recording' }),
   end: () => set({ runId: null, startedAt: null, status: 'idle' }),

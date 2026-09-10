@@ -8,7 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { Colors, Fonts } from '@/constants/theme';
 import { initSchema } from '@/db/client';
-import { ensureTracking, recoverActiveRun } from '@/tracking/recorder';
+import { ensureTracking, recoverActiveRun, requestBatteryExemptionOnce } from '@/tracking/recorder';
 // Define la tarea de background en el arranque (side-effect import).
 import '@/tracking/locationTask';
 
@@ -43,6 +43,11 @@ export default function RootLayout() {
     initSchema();
     recoverActiveRun().catch(() => {});
     SplashScreen.hideAsync();
+
+    // Exención de batería: se pide UNA vez, aquí y no en el botón Empezar. El
+    // intent de Ajustes manda la app a background; si eso pasa justo antes de
+    // startLocationUpdatesAsync, expo-location no arranca el FGS (dispara el P0).
+    requestBatteryExemptionOnce().catch(() => {});
 
     // Al volver a primer plano, solo comprobar que el GPS sigue enganchado.
     // (recoverActiveRun aquí borraría una carrera recién empezada — ver recorder.ts)

@@ -1,6 +1,7 @@
 import {
   computeMetrics,
   computeSplits,
+  isPausedByEvents,
   manualPauseIntervals,
   mergeIntervals,
   pausedMsWithin,
@@ -34,6 +35,44 @@ describe('manualPauseIntervals', () => {
   it('cierra una pausa sin resume al final de la carrera', () => {
     const events: RunEvent[] = [{ ts: 1000, kind: 'pause' }];
     expect(manualPauseIntervals(events, 5000)).toEqual([{ start: 1000, end: 5000 }]);
+  });
+});
+
+describe('isPausedByEvents', () => {
+  it('sin eventos → no está en pausa', () => {
+    expect(isPausedByEvents([])).toBe(false);
+  });
+
+  it('un pause sin resume → en pausa', () => {
+    expect(isPausedByEvents([{ ts: 1000, kind: 'pause' }])).toBe(true);
+  });
+
+  it('pause + resume → no está en pausa', () => {
+    expect(
+      isPausedByEvents([
+        { ts: 1000, kind: 'pause' },
+        { ts: 2000, kind: 'resume' },
+      ]),
+    ).toBe(false);
+  });
+
+  it('gana el último evento: pause, resume, pause → en pausa', () => {
+    expect(
+      isPausedByEvents([
+        { ts: 1000, kind: 'pause' },
+        { ts: 2000, kind: 'resume' },
+        { ts: 3000, kind: 'pause' },
+      ]),
+    ).toBe(true);
+  });
+
+  it('ordena por ts aunque lleguen desordenados', () => {
+    expect(
+      isPausedByEvents([
+        { ts: 3000, kind: 'resume' },
+        { ts: 1000, kind: 'pause' },
+      ]),
+    ).toBe(false);
   });
 });
 
