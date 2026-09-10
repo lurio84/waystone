@@ -126,18 +126,25 @@ line(diverge
 line();
 
 // ── Veredicto P0 ─────────────────────────────────────────────────────────
-line('VEREDICTO P0');
+// Ojo: este script solo ve los PUNTOS. Que los puntos paren no distingue
+// "el proceso murió" (P0) de "te paraste / perdiste cobertura al final".
+// Eso lo dice `adb shell ps -o ETIME` (edad < duración ⇒ hubo kill) y
+// `dumpsys activity services` (¿sigue el FGS?). El veredicto de aquí es
+// una pista, no la sentencia.
+line('VEREDICTO P0  (pista — confirmar con ps ETIME + dumpsys services)');
 const totalKmStraight = haversineMeters(real[0], real[real.length - 1]) / 1000;
 if (run.status === 'active' || endedAt == null) {
-  line('  la carrera NO se cerró limpiamente (status active / sin ended_at):');
-  line('  el proceso murió a media y se rescató. P0 CONFIRMADO.');
+  line('  status active / sin ended_at → se rescató por Reanudar→Terminar.');
+  line('  El proceso murió a media. P0 CONFIRMADO.');
 } else if (gaps[0].gapS > 120) {
-  line(`  hueco de ${gaps[0].gapS.toFixed(0)} s en el min ${min(gaps[0].fromMinuteMs)}: el GPS`);
-  line('  se cortó y volvió. Estrangulamiento del FGS. P0 PARCIAL.');
+  line(`  hueco de ${gaps[0].gapS.toFixed(0)} s en el min ${min(gaps[0].fromMinuteMs)}: el GPS se`);
+  line('  cortó y volvió. Estrangulamiento del FGS. P0 PARCIAL.');
 } else if (endedAt != null && lastPointAgeMs > 120_000 && pointSpanS < clockRawS * 0.9) {
-  line('  los puntos paran mucho antes del "Terminar": la grabación murió');
-  line('  y no volvió hasta reabrir la app. P0 CONFIRMADO.');
+  line(`  los puntos paran ${min(lastPointAgeMs)} min antes del "Terminar". SOSPECHOSO:`);
+  line('  puede ser P0 (proceso muerto) o que te pararas / sin cobertura al final.');
+  line('  Mirar ps ETIME: si la edad del proceso < duración de la carrera → P0.');
 } else {
-  line('  huecos < 2 min y puntos hasta el final: la grabación AGUANTÓ. P0 mitigado ✓');
+  line('  huecos < 2 min y puntos casi hasta el final: pinta que AGUANTÓ.');
+  line('  Confirmar que la notificación siguió visible y el FGS vivo al volver.');
 }
 line(`  (referencia: ${totalKmStraight.toFixed(2)} km en línea recta inicio→fin)`);
