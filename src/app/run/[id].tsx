@@ -89,7 +89,8 @@ export default function RunDetailScreen() {
               <Cell label="En movimiento" value={formatDuration(run.movingTimeS)} />
               <Cell label="Tiempo total" value={formatDuration(run.elapsedTimeS)} />
               <Cell label="Ritmo medio" value={`${formatPace(run.avgPaceSPerKm)} /km`} />
-              <Cell label="Desnivel +" value={`${Math.round(run.elevGainM)} m`} />
+              {/* GPS sin corrección DEM sobreestima el desnivel; el número es orientativo. */}
+              <Cell label="Desnivel +" value={`≈ ${Math.round(run.elevGainM)} m`} />
             </View>
           </StonePanel>
 

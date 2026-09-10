@@ -47,3 +47,6 @@ example
 
 # fixtures regenerables con scripts/fixtures/make-fixture.ts
 /scripts/fixtures/*.json
+
+# exports de carreras reales (datos, no código) — se guardan localmente
+/waystone-*.json

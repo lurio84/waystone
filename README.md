@@ -39,6 +39,10 @@ reconstruir sin haber perdido nada.
 - Las **pausas manuales** sí son hechos: se guardan como eventos (`run_events`).
 - Los **logros** ("runas") también son hechos: se escriben una vez en
   `achievements` y no se recalculan nunca, aunque la caché que los disparó cambie.
+- El **desnivel** se calcula sobre la altitud del GPS, que sin corrección contra un
+  modelo de elevación (DEM) sobreestima bastante en terreno llano. Se muestra con
+  `≈` y es orientativo; distancia y ritmo, que van sobre la posición horizontal, sí
+  son fiables.
 
 ## Stack
 
