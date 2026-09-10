@@ -9,6 +9,11 @@
  * la app salen de las MISMAS funciones. Si el APK del móvil es anterior a los
  * fixes de métricas, la fila `runs` del export traerá los valores viejos
  * (inflados por el punto fantasma) y aquí se ve el contraste.
+ *
+ * Nota: desde `c8dce6a` el punto fantasma se filtra en captura, así que los
+ * exports de APKs nuevos ya no lo traen (el bloque "fantasma" reportará 0).
+ * El recorte por `startedAt` en `src/core` sigue ahí como defensa para
+ * exports viejos.
  */
 import { readFileSync } from 'node:fs';
 import { haversineMeters } from '../src/core/geo';
