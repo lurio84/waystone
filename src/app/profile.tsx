@@ -47,6 +47,7 @@ export default function ProfileScreen() {
   const [data, setData] = useState<ProfileData>(load);
   const lastSeenLevel = useProgressSeen((s) => s.lastSeenLevel);
   const markLevelSeen = useProgressSeen((s) => s.markLevelSeen);
+  const hasHydrated = useProgressSeen((s) => s.hasHydrated);
 
   // La barra de XP crece desde 0 al entrar; el pulso ámbar solo si el nivel
   // ha subido desde la última vez que se vio el perfil.
@@ -85,7 +86,14 @@ export default function ProfileScreen() {
   // Pulso ámbar solo si el nivel ha subido desde la última vez que se vio el
   // perfil. Al marcarlo visto `lastSeenLevel` cambia y el efecto re-corre, pero
   // ya no cumple la condición → no repite.
+  //
+  // Gateado con `hasHydrated`: el store persiste con AsyncStorage y arranca
+  // en el default (`lastSeenLevel: 1`) hasta que rehidrata, un tick después
+  // del mount. Sin este guard, un cold start pillaba `lastSeenLevel` todavía
+  // en 1 y disparaba el pulso en falso cada vez que se abría Perfil, aunque
+  // el nivel llevara tiempo visto (persistido).
   useEffect(() => {
+    if (!hasHydrated) return;
     if (level.level > lastSeenLevel) {
       glow.value = withSequence(
         withTiming(1, { duration: 200, reduceMotion: ReduceMotion.System }),
@@ -95,7 +103,7 @@ export default function ProfileScreen() {
       );
       markLevelSeen(level.level);
     }
-  }, [level.level, lastSeenLevel, markLevelSeen, glow]);
+  }, [hasHydrated, level.level, lastSeenLevel, markLevelSeen, glow]);
 
   const fillStyle = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * 0.16 }));
