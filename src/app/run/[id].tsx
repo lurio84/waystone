@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { formatDateTime, formatDuration, formatPace } from '@/core/format';
-import { routePoints } from '@/core/metrics';
+import { routeSegments } from '@/core/metrics';
 import { runesForRun } from '@/core/runes';
 import { getUnlockedAchievements } from '@/db/achievements';
 import { deleteRun, getEvents, getPoints, getRun, getSplits } from '@/db/runs';
@@ -38,7 +38,7 @@ export default function RunDetailScreen() {
   );
   const route = useMemo(
     () =>
-      routePoints(getPoints(runId), getEvents(runId), {
+      routeSegments(getPoints(runId), getEvents(runId), {
         startedAt: run?.startedAt,
         endedAt: run?.endedAt ?? undefined,
       }),
@@ -109,9 +109,7 @@ export default function RunDetailScreen() {
             </Animated.View>
           )}
 
-          {route.length >= 2 && (
-            <RouteMap points={route} style={styles.map} />
-          )}
+          <RouteMap segments={route} style={styles.map} />
 
           <StonePanel style={styles.summary}>
             <View style={styles.headline}>

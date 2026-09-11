@@ -22,49 +22,67 @@ LogManager.setLogLevel('error');
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
 
 export interface RouteMapProps {
-  points: { lat: number; lon: number }[];
+  /**
+   * La traza partida en tramos continuos (ver `routeSegments` en
+   * `src/core/metrics.ts`): un tramo por cada corte de pausa o hueco de GPS.
+   * Se dibuja una `LineString` por tramo en vez de una sola línea que
+   * cruzaría el corte en recta.
+   */
+  segments: { lat: number; lon: number }[][];
   /** modo en vivo: la cámara sigue al último punto en vez de encuadrar la ruta */
   follow?: boolean;
   style?: ViewStyle;
 }
 
-export function RouteMap({ points, follow = false, style }: RouteMapProps) {
+export function RouteMap({ segments, follow = false, style }: RouteMapProps) {
   const theme = useTheme();
 
-  const coords = useMemo(() => points.map((p) => [p.lon, p.lat] as [number, number]), [points]);
+  const coordSegments = useMemo(
+    () => segments.map((seg) => seg.map((p) => [p.lon, p.lat] as [number, number])),
+    [segments],
+  );
+
+  const totalPoints = useMemo(
+    () => coordSegments.reduce((n, seg) => n + seg.length, 0),
+    [coordSegments],
+  );
 
   const line = useMemo(
     () => ({
       type: 'FeatureCollection' as const,
-      features: [
-        {
+      features: coordSegments
+        .filter((seg) => seg.length >= 2)
+        .map((seg) => ({
           type: 'Feature' as const,
-          geometry: { type: 'LineString' as const, coordinates: coords },
+          geometry: { type: 'LineString' as const, coordinates: seg },
           properties: {},
-        },
-      ],
+        })),
     }),
-    [coords],
+    [coordSegments],
   );
 
   const bounds = useMemo<[number, number, number, number] | null>(() => {
-    if (coords.length < 2) return null;
-    let w = coords[0][0];
-    let e = coords[0][0];
-    let s = coords[0][1];
-    let n = coords[0][1];
-    for (const [lon, lat] of coords) {
-      if (lon < w) w = lon;
-      if (lon > e) e = lon;
-      if (lat < s) s = lat;
-      if (lat > n) n = lat;
+    if (totalPoints < 2) return null;
+    let w = Infinity;
+    let e = -Infinity;
+    let s = Infinity;
+    let n = -Infinity;
+    for (const seg of coordSegments) {
+      for (const [lon, lat] of seg) {
+        if (lon < w) w = lon;
+        if (lon > e) e = lon;
+        if (lat < s) s = lat;
+        if (lat > n) n = lat;
+      }
     }
     return [w, s, e, n];
-  }, [coords]);
+  }, [coordSegments, totalPoints]);
 
-  if (coords.length < 2) return null;
+  if (totalPoints < 2) return null;
 
-  const last = coords[coords.length - 1];
+  const nonEmptySegments = coordSegments.filter((seg) => seg.length > 0);
+  const first = nonEmptySegments[0][0];
+  const last = nonEmptySegments[nonEmptySegments.length - 1].at(-1)!;
 
   return (
     <View style={[styles.wrap, style]}>
@@ -94,7 +112,7 @@ export function RouteMap({ points, follow = false, style }: RouteMapProps) {
           />
         </GeoJSONSource>
 
-        <Marker lngLat={coords[0]}>
+        <Marker lngLat={first}>
           <View style={[styles.dot, { backgroundColor: theme.primary, borderColor: theme.background }]} />
         </Marker>
         {!follow && (

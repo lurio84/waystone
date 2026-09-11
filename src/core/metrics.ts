@@ -269,21 +269,6 @@ export function routeSegments(
 }
 
 /**
- * Puntos para dibujar la traza en el mapa: los usables (filtrados por precisión)
- * y EN MOVIMIENTO — se quitan los que caen dentro de una pausa. Sin esto, un
- * rato parado dibuja una maraña de deriva del GPS donde no hubo recorrido.
- * Misma regla que `movingDistanceMeters`. Array plano; para cortar la línea
- * en las pausas usar `routeSegments`.
- */
-export function routePoints(
-  points: RawPoint[],
-  events: RunEvent[],
-  opts: MetricsOptions = {},
-): RawPoint[] {
-  return routeSegments(points, events, opts).flat();
-}
-
-/**
  * Parciales por distancia (1 km por defecto). El instante en que se cruza
  * cada marca se interpola linealmente entre los dos puntos que la rodean,
  * en vez de coger el punto más cercano: con muestreo de 1 s eso son hasta

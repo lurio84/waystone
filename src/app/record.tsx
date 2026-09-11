@@ -94,8 +94,8 @@ export default function RecordScreen() {
           </View>
         )}
 
-        {liveMap && metrics.points.length >= 2 && (
-          <RouteMap points={metrics.points} follow style={styles.map} />
+        {liveMap && (
+          <RouteMap segments={metrics.segments} follow style={styles.map} />
         )}
 
         <View style={styles.main}>
