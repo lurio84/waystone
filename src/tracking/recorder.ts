@@ -13,6 +13,7 @@ import {
   listAllRuns,
   startRun,
 } from '@/db/runs';
+import { syncElevationProfile } from '@/elevation/sync';
 import { LOCATION_TASK } from './locationTask';
 
 const LOCATION_OPTIONS: Location.LocationTaskOptions = {
@@ -140,6 +141,10 @@ export async function stopRecording(): Promise<number | null> {
   } catch {
     // no bloquear el cierre de la carrera por esto
   }
+  // Perfil DEM: mejor esfuerzo, SIN esperar — no bloquea la navegación al
+  // detalle. `syncElevationProfile` nunca lanza; si falla (sin red, etc.) el
+  // detalle reintenta solo al montar.
+  void syncElevationProfile(active.id);
   return active.id;
 }
 

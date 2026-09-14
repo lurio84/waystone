@@ -1,3 +1,4 @@
+import { buildProfile, sampleForDem } from './elevation';
 import {
   computeMetrics,
   computeSplits,
@@ -331,6 +332,93 @@ describe('computeMetrics', () => {
       expect(tight).toBeLessThan(245);
       expect(tight).toBeGreaterThan(235);
     });
+  });
+});
+
+describe('MetricsOptions.elevationProfile — cablea el desnivel DEM en vez del GPS crudo', () => {
+  const startTs = 1_000_000_000_000;
+
+  it('computeMetrics usa el perfil cuando viene, e ignora la altitud del GPS', () => {
+    // GPS "crudo" con ruido de desnivel exagerado (jitter de altitud vía
+    // elevM alternante no existe en synthWalk, así que se fuerza distinto
+    // del perfil directamente).
+    const points = synthWalk([{ seconds: 300, speedMs: 3, elevM: 150 }], { startTs }); // GPS: sube 150 m
+    const opts = { startedAt: startTs, endedAt: points[points.length - 1].ts };
+
+    const gpsOnly = computeMetrics(points, [], opts);
+    expect(gpsOnly.elevGainM).toBeGreaterThan(140); // el GPS "sobreestima" tal cual se generó
+
+    const samples = sampleForDem(points, 90);
+    const flatElevations = samples.map(() => 100); // el DEM dice: terreno llano
+    const profile = buildProfile(samples, flatElevations, { stepM: 90, smoothWindow: 0 });
+
+    const withDem = computeMetrics(points, [], { ...opts, elevationProfile: profile });
+    expect(withDem.elevGainM).toBe(0);
+  });
+
+  it('computeSplits sale coherente con el total cuando hay perfil (mismo dato, no dos fuentes)', () => {
+    const points = synthWalk([{ seconds: 300, speedMs: 3, elevM: 150 }], { startTs });
+    const opts = { startedAt: startTs, endedAt: points[points.length - 1].ts };
+
+    const samples = sampleForDem(points, 90);
+    const n = samples.length;
+    const rampElevations = samples.map((_, i) => 100 + (30 * i) / (n - 1)); // sube 30 m limpios
+    const profile = buildProfile(samples, rampElevations, { stepM: 90, smoothWindow: 0 });
+
+    const splits = computeSplits(points, [], 1000, { ...opts, elevationProfile: profile });
+    const totalFromSplits = splits.reduce((s, x) => s + x.elevGainM, 0);
+    const total = computeMetrics(points, [], { ...opts, elevationProfile: profile }).elevGainM;
+    // la suma de parciales no tiene por qué ser idéntica al total (histéresis
+    // por ventana vs. global), pero debe quedarse en el mismo orden de
+    // magnitud — no la disparidad de hoy (parciales con GPS crudo, total con DEM).
+    expect(totalFromSplits).toBeGreaterThan(total * 0.7);
+    expect(totalFromSplits).toBeLessThan(total * 1.3);
+  });
+});
+
+describe('routeSegments — ventana de precisión degradada (sin hueco temporal)', () => {
+  // El GPS sigue entregando a 1 Hz durante una ventana de mala precisión (un
+  // cañón urbano, no un túnel): NO hay hueco temporal, así que
+  // dataGapIntervals no lo ve. filterPoints descarta esos puntos por
+  // accuracy, y dos puntos que antes estaban a 30 s uno de otro (con
+  // recorrido real entre medias) quedan consecutivos en el mismo segmento →
+  // salto en línea recta atravesando la ventana. Caso real medido en el
+  // simulador `river-run` el 2026-09-11 (salto de 102,1 m dentro de un único
+  // segmento).
+  const startTs = 1_000_000_000_000;
+
+  function runWithBadAccuracyWindow() {
+    const points = synthWalk(
+      [
+        { seconds: 60, speedMs: 3 }, // 180 m normales
+        { seconds: 30, speedMs: 3, accuracy: 40 }, // 90 m, precisión mala, sin hueco temporal
+        { seconds: 60, speedMs: 3 }, // 180 m normales
+      ],
+      { startTs },
+    );
+    return {
+      points,
+      opts: { startedAt: startTs, endedAt: points[points.length - 1].ts },
+    };
+  }
+
+  it('NO genera hueco temporal (dataGapIntervals ve la ventana llena a 1 Hz)', () => {
+    const { points } = runWithBadAccuracyWindow();
+    expect(dataGapIntervals(points)).toEqual([]);
+  });
+
+  it('la traza se corta en la ventana de mala precisión, no la cruza en recta', () => {
+    const { points, opts } = runWithBadAccuracyWindow();
+    const segs = routeSegments(points, [], opts);
+    // sin el fix: 1 solo segmento con un salto de ~90 m en su interior
+    expect(segs.length).toBeGreaterThanOrEqual(2);
+    for (const seg of segs) {
+      let maxStep = 0;
+      for (let i = 1; i < seg.length; i++) {
+        maxStep = Math.max(maxStep, haversineMeters(seg[i - 1], seg[i]));
+      }
+      expect(maxStep).toBeLessThan(10); // muestreo normal a 3 m/s ≈ 3 m/punto
+    }
   });
 });
 

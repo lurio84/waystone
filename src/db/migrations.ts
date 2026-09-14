@@ -51,6 +51,28 @@ export const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 4,
+    label: 'perfil de elevación DEM (elevation_samples) + runs.elev_gain_dem_m',
+    up: (db) => {
+      // El perfil DEM es un HECHO descargado una vez por carrera, igual que
+      // `achievements`: se persiste tal cual llega, `recalcRun` no lo toca.
+      // `runs.elevGainM` (GPS) se sigue escribiendo siempre como fallback;
+      // `elevGainDemM` NULL significa "sin corregir todavía", no "0 m".
+      db.execSync(`
+        CREATE TABLE IF NOT EXISTS elevation_samples (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_id INTEGER NOT NULL,
+          run_index INTEGER NOT NULL,
+          ts INTEGER NOT NULL,
+          elevation REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_elevation_samples_run
+          ON elevation_samples (run_id, run_index, ts);
+        ALTER TABLE runs ADD COLUMN elev_gain_dem_m REAL;
+      `);
+    },
+  },
 ];
 
 /**
