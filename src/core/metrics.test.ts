@@ -334,6 +334,52 @@ describe('computeMetrics', () => {
   });
 });
 
+describe('routeSegments — ventana de precisión degradada (sin hueco temporal)', () => {
+  // El GPS sigue entregando a 1 Hz durante una ventana de mala precisión (un
+  // cañón urbano, no un túnel): NO hay hueco temporal, así que
+  // dataGapIntervals no lo ve. filterPoints descarta esos puntos por
+  // accuracy, y dos puntos que antes estaban a 30 s uno de otro (con
+  // recorrido real entre medias) quedan consecutivos en el mismo segmento →
+  // salto en línea recta atravesando la ventana. Caso real medido en el
+  // simulador `river-run` el 2026-09-11 (salto de 102,1 m dentro de un único
+  // segmento).
+  const startTs = 1_000_000_000_000;
+
+  function runWithBadAccuracyWindow() {
+    const points = synthWalk(
+      [
+        { seconds: 60, speedMs: 3 }, // 180 m normales
+        { seconds: 30, speedMs: 3, accuracy: 40 }, // 90 m, precisión mala, sin hueco temporal
+        { seconds: 60, speedMs: 3 }, // 180 m normales
+      ],
+      { startTs },
+    );
+    return {
+      points,
+      opts: { startedAt: startTs, endedAt: points[points.length - 1].ts },
+    };
+  }
+
+  it('NO genera hueco temporal (dataGapIntervals ve la ventana llena a 1 Hz)', () => {
+    const { points } = runWithBadAccuracyWindow();
+    expect(dataGapIntervals(points)).toEqual([]);
+  });
+
+  it('la traza se corta en la ventana de mala precisión, no la cruza en recta', () => {
+    const { points, opts } = runWithBadAccuracyWindow();
+    const segs = routeSegments(points, [], opts);
+    // sin el fix: 1 solo segmento con un salto de ~90 m en su interior
+    expect(segs.length).toBeGreaterThanOrEqual(2);
+    for (const seg of segs) {
+      let maxStep = 0;
+      for (let i = 1; i < seg.length; i++) {
+        maxStep = Math.max(maxStep, haversineMeters(seg[i - 1], seg[i]));
+      }
+      expect(maxStep).toBeLessThan(10); // muestreo normal a 3 m/s ≈ 3 m/punto
+    }
+  });
+});
+
 describe('computeSplits', () => {
   it('parte 2.4 km a 4 m/s en 3 parciales (1000, 1000, ~400)', () => {
     const pts = synthWalk([{ seconds: 600, speedMs: 4 }]); // 2400 m

@@ -202,8 +202,13 @@ export function computeMetrics(
   const elapsedMs = Math.max(0, endTs - startTs);
 
   const filtered = filterPoints(pts);
+  // `allPauses` corre sobre `filtered`, no sobre `pts`: una ventana de mala
+  // precisión sin hueco temporal real (el GPS sigue entregando a 1 Hz) no
+  // genera hueco visto desde los puntos crudos, pero SÍ lo hace visto desde
+  // los puntos filtrados — ahí es donde `filterPoints` acaba de crear un
+  // hueco real. Ver `routeSegments` más abajo, mismo razonamiento.
   const pauses = allPauses(
-    pts,
+    filtered,
     events,
     endTs,
     opts.autopause ?? DEFAULT_AUTOPAUSE,
@@ -246,8 +251,12 @@ export function routeSegments(
   const filtered = filterPoints(pts);
   if (filtered.length === 0) return [];
   const endTs = boundedEndTs(pts[pts.length - 1].ts, opts.endedAt);
+  // Sobre `filtered`, no `pts` — ver el comentario en computeMetrics. Antes de
+  // este fix, dos puntos filtrados que quedaban consecutivos tras una ventana
+  // de mala precisión (pero separados 20-30 s en el reloj real) no generaban
+  // corte: `dataGapIntervals` veía los puntos crudos a 1 Hz, sin hueco.
   const pauses = allPauses(
-    pts,
+    filtered,
     events,
     endTs,
     opts.autopause ?? DEFAULT_AUTOPAUSE,
@@ -289,8 +298,9 @@ export function computeSplits(
 
   const lastTs = pts.length ? pts[pts.length - 1].ts : filtered[filtered.length - 1].ts;
   const endTs = boundedEndTs(lastTs, opts.endedAt);
+  // Sobre `filtered`, no `pts` — ver el comentario en computeMetrics.
   const pauses = allPauses(
-    pts,
+    filtered,
     events,
     endTs,
     opts.autopause ?? DEFAULT_AUTOPAUSE,
