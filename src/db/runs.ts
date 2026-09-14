@@ -3,7 +3,7 @@ import { computeMetrics, computeSplits } from '@/core/metrics';
 import type { RawPoint, RunEvent, RunSummary } from '@/core/types';
 import { getDb } from './client';
 import { getElevationProfile } from './elevation';
-import { points, runEvents, runs, splits, type RunRow, type SplitRow } from './schema';
+import { elevationSamples, points, runEvents, runs, splits, type RunRow, type SplitRow } from './schema';
 
 /**
  * Mapea la fila cacheada de `runs` al resumen que consume `src/core`
@@ -215,6 +215,7 @@ export function deleteRun(runId: number): void {
   db.delete(points).where(eq(points.runId, runId)).run();
   db.delete(runEvents).where(eq(runEvents.runId, runId)).run();
   db.delete(splits).where(eq(splits.runId, runId)).run();
+  db.delete(elevationSamples).where(eq(elevationSamples.runId, runId)).run();
   db.delete(runs).where(eq(runs.id, runId)).run();
 }
 

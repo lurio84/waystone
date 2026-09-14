@@ -1,5 +1,5 @@
 import { autoPauseIntervals, AutoPauseOptions, DEFAULT_AUTOPAUSE } from './autopause';
-import { elevationGainFromProfile, elevationGainInWindow, type ElevationProfile } from './elevation';
+import { elevationGainInWindow, type ElevationProfile } from './elevation';
 import { elevationGainMeters, filterPoints, haversineMeters } from './geo';
 import type { Interval, RawPoint, RunEvent, RunMetrics, Split } from './types';
 
@@ -210,13 +210,16 @@ export function computeMetrics(
   const elapsedMs = Math.max(0, endTs - startTs);
 
   const filtered = filterPoints(pts);
-  // `allPauses` corre sobre `filtered`, no sobre `pts`: una ventana de mala
-  // precisión sin hueco temporal real (el GPS sigue entregando a 1 Hz) no
-  // genera hueco visto desde los puntos crudos, pero SÍ lo hace visto desde
-  // los puntos filtrados — ahí es donde `filterPoints` acaba de crear un
-  // hueco real. Ver `routeSegments` más abajo, mismo razonamiento.
+  // `allPauses` corre sobre `pts` (crudo), NO sobre `filtered`, aquí — a
+  // diferencia de `routeSegments` más abajo. Un corredor real cruzando una
+  // ventana de mala precisión sigue corriendo: tratarla como pausa le resta
+  // el tramo de `movingTimeS`/`distanceM` (medido: 450 m/150 s reales caían a
+  // 350 m/119 s). Sobre `pts` el GPS entrega a 1 Hz sin hueco temporal, así
+  // que no se genera pausa — `movingDistanceMeters(filtered, pauses)` suma
+  // igualmente el salto entre los dos puntos filtrados que rodean la
+  // ventana, que es la mejor aproximación disponible a la distancia real.
   const pauses = allPauses(
-    filtered,
+    pts,
     events,
     endTs,
     opts.autopause ?? DEFAULT_AUTOPAUSE,
@@ -224,8 +227,14 @@ export function computeMetrics(
   );
 
   const distanceM = movingDistanceMeters(filtered, pauses);
+  // Ventaneado a [startTs, endTs], no el perfil entero: el perfil se
+  // construye en `syncElevationProfile` a partir de TODOS los puntos crudos
+  // de la carrera (sin trimPreStart ni el clamp de endedAt), igual que el
+  // fallback GPS (`elevationGainMeters(filtered)`, que sí parte de `filtered`
+  // ya recortado) — sin ventanear, un fantasma o puntos tras "Terminar"
+  // sumarían terreno fuera de la carrera al total pero no a distancia/tiempo.
   const elevGainM = opts.elevationProfile
-    ? elevationGainFromProfile(opts.elevationProfile)
+    ? elevationGainInWindow(opts.elevationProfile, startTs, endTs)
     : elevationGainMeters(filtered);
 
   const pausedMs = pausedMsWithin(pauses, startTs, endTs);
@@ -249,7 +258,9 @@ export function computeMetrics(
  * cortan allí donde hubo una pausa o un hueco de datos. El mapa dibuja un
  * polilínea por tramo (MultiLineString) — así una parada en un semáforo o
  * una grabación muerta a media dejan un corte visible, no una recta
- * fantasma. Misma regla de pausas que `movingDistanceMeters`.
+ * fantasma. A diferencia de las métricas (`computeMetrics`/`computeSplits`),
+ * aquí las pausas se calculan sobre `filtered`, no `pts` — ver el porqué
+ * justo debajo.
  */
 export function routeSegments(
   points: RawPoint[],
@@ -261,10 +272,17 @@ export function routeSegments(
   const filtered = filterPoints(pts);
   if (filtered.length === 0) return [];
   const endTs = boundedEndTs(pts[pts.length - 1].ts, opts.endedAt);
-  // Sobre `filtered`, no `pts` — ver el comentario en computeMetrics. Antes de
-  // este fix, dos puntos filtrados que quedaban consecutivos tras una ventana
-  // de mala precisión (pero separados 20-30 s en el reloj real) no generaban
-  // corte: `dataGapIntervals` veía los puntos crudos a 1 Hz, sin hueco.
+  // Sobre `filtered`, a propósito SOLO aquí: antes de este fix, dos puntos
+  // filtrados que quedaban consecutivos tras una ventana de mala precisión
+  // (pero separados 20-30 s en el reloj real) no generaban corte —
+  // `dataGapIntervals` veía los puntos crudos a 1 Hz, sin hueco, y el mapa
+  // dibujaba un salto en línea recta atravesando la ventana. Para el DIBUJO
+  // eso es lo correcto: sin los puntos malos no hay con qué trazar ese tramo.
+  // Para las MÉTRICAS (computeMetrics/computeSplits) sería un error: un
+  // corredor real cruzando esa ventana sigue corriendo, y tratarla como
+  // pausa le resta distancia y tiempo en movimiento de verdad (medido: 450 m
+  // / 150 s reales caían a 350 m / 119 s) — por eso esas dos funciones usan
+  // `pts` sin filtrar, donde el muestreo a 1 Hz no genera hueco ninguno.
   const pauses = allPauses(
     filtered,
     events,
@@ -308,9 +326,9 @@ export function computeSplits(
 
   const lastTs = pts.length ? pts[pts.length - 1].ts : filtered[filtered.length - 1].ts;
   const endTs = boundedEndTs(lastTs, opts.endedAt);
-  // Sobre `filtered`, no `pts` — ver el comentario en computeMetrics.
+  // Sobre `pts`, no `filtered` — ver el comentario en computeMetrics.
   const pauses = allPauses(
-    filtered,
+    pts,
     events,
     endTs,
     opts.autopause ?? DEFAULT_AUTOPAUSE,

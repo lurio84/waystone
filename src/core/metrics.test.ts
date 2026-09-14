@@ -420,6 +420,18 @@ describe('routeSegments — ventana de precisión degradada (sin hueco temporal)
       expect(maxStep).toBeLessThan(10); // muestreo normal a 3 m/s ≈ 3 m/punto
     }
   });
+
+  it('computeMetrics NO trata la ventana como pausa: el corredor seguía corriendo', () => {
+    // La misma ventana que corta la traza (bien, arriba) NO debe restar
+    // distancia ni tiempo en movimiento — el corredor cruzó los 150 s / 450 m
+    // enteros, real. Regresión real detectada tras el merge inicial: con
+    // `allPauses` sobre `filtered` en computeMetrics, esto caía a ~350 m /
+    // ~119 s (la ventana entera contaba como parada).
+    const { points, opts } = runWithBadAccuracyWindow();
+    const m = computeMetrics(points, [], opts);
+    expect(m.distanceM).toBeGreaterThan(430);
+    expect(m.movingTimeS).toBeGreaterThan(145);
+  });
 });
 
 describe('computeSplits', () => {
