@@ -1,3 +1,4 @@
+import { buildProfile, sampleForDem } from './elevation';
 import {
   computeMetrics,
   computeSplits,
@@ -331,6 +332,47 @@ describe('computeMetrics', () => {
       expect(tight).toBeLessThan(245);
       expect(tight).toBeGreaterThan(235);
     });
+  });
+});
+
+describe('MetricsOptions.elevationProfile — cablea el desnivel DEM en vez del GPS crudo', () => {
+  const startTs = 1_000_000_000_000;
+
+  it('computeMetrics usa el perfil cuando viene, e ignora la altitud del GPS', () => {
+    // GPS "crudo" con ruido de desnivel exagerado (jitter de altitud vía
+    // elevM alternante no existe en synthWalk, así que se fuerza distinto
+    // del perfil directamente).
+    const points = synthWalk([{ seconds: 300, speedMs: 3, elevM: 150 }], { startTs }); // GPS: sube 150 m
+    const opts = { startedAt: startTs, endedAt: points[points.length - 1].ts };
+
+    const gpsOnly = computeMetrics(points, [], opts);
+    expect(gpsOnly.elevGainM).toBeGreaterThan(140); // el GPS "sobreestima" tal cual se generó
+
+    const samples = sampleForDem(points, 90);
+    const flatElevations = samples.map(() => 100); // el DEM dice: terreno llano
+    const profile = buildProfile(samples, flatElevations, { stepM: 90, smoothWindow: 0 });
+
+    const withDem = computeMetrics(points, [], { ...opts, elevationProfile: profile });
+    expect(withDem.elevGainM).toBe(0);
+  });
+
+  it('computeSplits sale coherente con el total cuando hay perfil (mismo dato, no dos fuentes)', () => {
+    const points = synthWalk([{ seconds: 300, speedMs: 3, elevM: 150 }], { startTs });
+    const opts = { startedAt: startTs, endedAt: points[points.length - 1].ts };
+
+    const samples = sampleForDem(points, 90);
+    const n = samples.length;
+    const rampElevations = samples.map((_, i) => 100 + (30 * i) / (n - 1)); // sube 30 m limpios
+    const profile = buildProfile(samples, rampElevations, { stepM: 90, smoothWindow: 0 });
+
+    const splits = computeSplits(points, [], 1000, { ...opts, elevationProfile: profile });
+    const totalFromSplits = splits.reduce((s, x) => s + x.elevGainM, 0);
+    const total = computeMetrics(points, [], { ...opts, elevationProfile: profile }).elevGainM;
+    // la suma de parciales no tiene por qué ser idéntica al total (histéresis
+    // por ventana vs. global), pero debe quedarse en el mismo orden de
+    // magnitud — no la disparidad de hoy (parciales con GPS crudo, total con DEM).
+    expect(totalFromSplits).toBeGreaterThan(total * 0.7);
+    expect(totalFromSplits).toBeLessThan(total * 1.3);
   });
 });
 

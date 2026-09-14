@@ -2,6 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { computeMetrics, computeSplits } from '@/core/metrics';
 import type { RawPoint, RunEvent, RunSummary } from '@/core/types';
 import { getDb } from './client';
+import { getElevationProfile } from './elevation';
 import { points, runEvents, runs, splits, type RunRow, type SplitRow } from './schema';
 
 /**
@@ -168,8 +169,15 @@ export function recalcRun(runId: number): void {
   // los puntos: descarta el punto fantasma del arranque y, si el P0 mató la
   // grabación, acota el "Terminar" (pulsado al llegar a casa) al último fix.
   const opts = { startedAt: run.startedAt, endedAt: run.endedAt ?? undefined };
+
+  // elevGainM (GPS) se recalcula SIEMPRE — es el fallback si no hay perfil
+  // DEM todavía, o si la descarga falló. elevGainDemM sale del perfil ya
+  // persistido (si lo hay); nunca se pide red desde aquí.
   const m = computeMetrics(pts, evts, opts);
-  const s = computeSplits(pts, evts, 1000, opts);
+  const profile = getElevationProfile(runId);
+  const demOpts = profile ? { ...opts, elevationProfile: profile } : opts;
+  const elevGainDemM = profile ? computeMetrics(pts, evts, demOpts).elevGainM : null;
+  const s = computeSplits(pts, evts, 1000, demOpts);
 
   db.update(runs)
     .set({
@@ -178,6 +186,7 @@ export function recalcRun(runId: number): void {
       elapsedTimeS: m.elapsedTimeS,
       avgPaceSPerKm: m.avgPaceSPerKm,
       elevGainM: m.elevGainM,
+      elevGainDemM,
     })
     .where(eq(runs.id, runId))
     .run();

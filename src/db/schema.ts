@@ -16,6 +16,9 @@ export const runs = sqliteTable('runs', {
   elapsedTimeS: real('elapsed_time_s').notNull().default(0),
   avgPaceSPerKm: real('avg_pace_s_per_km').notNull().default(0),
   elevGainM: real('elev_gain_m').notNull().default(0),
+  /** Desnivel + corregido con DEM (`src/core/elevation.ts`). NULL = sin
+   * perfil todavía — la UI cae a `elevGainM` (GPS). Columna de la migración v4. */
+  elevGainDemM: real('elev_gain_dem_m'),
   notes: text('notes'),
 });
 
@@ -61,8 +64,25 @@ export const achievements = sqliteTable('achievements', {
   runId: integer('run_id').notNull(),
 });
 
+/**
+ * Perfil de elevación DEM, aplanado. `runIndex` reconstruye los TRAMOS
+ * (`ElevationProfile` es `ElevationSample[][]`, cortada donde hay un
+ * salto/hueco de origen — ver `src/core/elevation.ts`): se agrupa por
+ * `runIndex` y se ordena por `ts` dentro de cada grupo. Se inserta una vez
+ * por carrera y no se recalcula — es un hecho descargado, no caché derivada.
+ * Tabla creada por la migración v4.
+ */
+export const elevationSamples = sqliteTable('elevation_samples', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  runId: integer('run_id').notNull(),
+  runIndex: integer('run_index').notNull(),
+  ts: integer('ts').notNull(),
+  elevation: real('elevation').notNull(),
+});
+
 export type RunRow = typeof runs.$inferSelect;
 export type PointRow = typeof points.$inferSelect;
 export type RunEventRow = typeof runEvents.$inferSelect;
 export type SplitRow = typeof splits.$inferSelect;
 export type AchievementRow = typeof achievements.$inferSelect;
+export type ElevationSampleRow = typeof elevationSamples.$inferSelect;

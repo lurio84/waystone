@@ -2,13 +2,14 @@ import { MIGRATIONS, pendingMigrations, type Migration } from './migrations';
 
 describe('pendingMigrations', () => {
   it('trata 0 y 1 como la misma versión (bootstrap)', () => {
-    expect(pendingMigrations(0).map((m) => m.version)).toEqual([2, 3]);
-    expect(pendingMigrations(1).map((m) => m.version)).toEqual([2, 3]);
+    expect(pendingMigrations(0).map((m) => m.version)).toEqual([2, 3, 4]);
+    expect(pendingMigrations(1).map((m) => m.version)).toEqual([2, 3, 4]);
   });
 
   it('aplica solo los pasos por encima de la versión actual', () => {
-    expect(pendingMigrations(2).map((m) => m.version)).toEqual([3]);
-    expect(pendingMigrations(3)).toEqual([]);
+    expect(pendingMigrations(2).map((m) => m.version)).toEqual([3, 4]);
+    expect(pendingMigrations(3).map((m) => m.version)).toEqual([4]);
+    expect(pendingMigrations(4)).toEqual([]);
   });
 
   it('no devuelve nada si la BD va por delante de la lista', () => {

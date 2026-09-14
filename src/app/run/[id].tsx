@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { routeSegments } from '@/core/metrics';
 import { runesForRun } from '@/core/runes';
 import { getUnlockedAchievements } from '@/db/achievements';
 import { deleteRun, getEvents, getPoints, getRun, getSplits } from '@/db/runs';
+import { syncElevationProfile } from '@/elevation/sync';
 import { useTheme } from '@/hooks/use-theme';
 import { exportRunGpx, exportRunJson } from '@/export/export-run';
 
@@ -24,9 +25,32 @@ export default function RunDetailScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  // Sube cada vez que el perfil DEM llega (o al reabrir la pantalla) para
+  // releer `run`/`splits` de la caché que `syncElevationProfile` refresca.
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const run = useMemo(() => getRun(runId), [runId]);
-  const splits = useMemo(() => getSplits(runId), [runId]);
+  // `refreshKey` no se lee dentro de los memos: solo fuerza a releer la BD
+  // (fuente mutable que el linter no ve) cuando el perfil DEM llega.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const run = useMemo(() => getRun(runId), [runId, refreshKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const splits = useMemo(() => getSplits(runId), [runId, refreshKey]);
+
+  // Reintento del perfil DEM: si `stopRecording` no tenía red, o esta es la
+  // primera vez que se abre una carrera grabada antes de tener esta
+  // corrección, aquí se pide y se persiste. Idempotente — si ya hay perfil,
+  // `syncElevationProfile` no vuelve a pedir red.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      syncElevationProfile(runId).then(() => {
+        if (!cancelled) setRefreshKey((k) => k + 1);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [runId]),
+  );
 
   // Runas que ganó ESTA carrera, derivadas de lo persistido en `achievements`.
   // No es un aviso puntual: sale cada vez que se abre la carrera, y sobrevive a
@@ -130,8 +154,11 @@ export default function RunDetailScreen() {
               <Cell label="En movimiento" value={formatDuration(run.movingTimeS)} />
               <Cell label="Tiempo total" value={formatDuration(run.elapsedTimeS)} />
               <Cell label="Ritmo medio" value={`${formatPace(run.avgPaceSPerKm)} /km`} />
-              {/* GPS sin corrección DEM sobreestima el desnivel; el número es orientativo. */}
-              <Cell label="Desnivel +" value={`≈ ${Math.round(run.elevGainM)} m`} />
+              {/* elevGainDemM (mapa de elevación) si ya se pidió; si no, GPS
+                  crudo como fallback — el GPS sobreestima mucho el desnivel.
+                  La `≈` se queda en ambos casos: incluso con DEM sigue siendo
+                  una estimación (90 m de resolución, suavizada), no una medida. */}
+              <Cell label="Desnivel +" value={`≈ ${Math.round(run.elevGainDemM ?? run.elevGainM)} m`} />
             </View>
           </StonePanel>
 

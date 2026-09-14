@@ -1,4 +1,5 @@
 import { autoPauseIntervals, AutoPauseOptions, DEFAULT_AUTOPAUSE } from './autopause';
+import { elevationGainFromProfile, elevationGainInWindow, type ElevationProfile } from './elevation';
 import { elevationGainMeters, filterPoints, haversineMeters } from './geo';
 import type { Interval, RawPoint, RunEvent, RunMetrics, Split } from './types';
 
@@ -156,6 +157,13 @@ export interface MetricsOptions {
   endedAt?: number;
   /** hueco máx. (s) entre puntos antes de tratar el tramo como sin datos. */
   dataGapS?: number;
+  /**
+   * Perfil de elevación corregido con DEM (ver `src/core/elevation.ts`).
+   * Si viene, el desnivel se calcula desde aquí en vez de la altitud cruda
+   * del GPS — mismo dato para el total y para cada parcial. Se pide y se
+   * persiste fuera de `src/core` (capa de red); aquí solo se consume.
+   */
+  elevationProfile?: ElevationProfile;
 }
 
 /**
@@ -216,7 +224,9 @@ export function computeMetrics(
   );
 
   const distanceM = movingDistanceMeters(filtered, pauses);
-  const elevGainM = elevationGainMeters(filtered);
+  const elevGainM = opts.elevationProfile
+    ? elevationGainFromProfile(opts.elevationProfile)
+    : elevationGainMeters(filtered);
 
   const pausedMs = pausedMsWithin(pauses, startTs, endTs);
   const movingMs = Math.max(0, elapsedMs - pausedMs);
@@ -318,12 +328,18 @@ export function computeSplits(
     const wallMs = endTsMark - segStartTs;
     const movingMs = Math.max(0, wallMs - pausedMsWithin(pauses, segStartTs, endTsMark));
     const durationS = movingMs / 1000;
+    // Con perfil DEM, el desnivel del parcial sale de la ventana [segStartTs,
+    // endTsMark] sobre el perfil — mismo dato que el total, nunca la altitud
+    // cruda del GPS conviviendo con un total ya corregido.
+    const elevGainM = opts.elevationProfile
+      ? elevationGainInWindow(opts.elevationProfile, segStartTs, endTsMark)
+      : segElevGain;
     splits.push({
       kmIndex,
       distanceM,
       durationS,
       paceSPerKm: distanceM > 0 ? durationS / (distanceM / 1000) : 0,
-      elevGainM: segElevGain,
+      elevGainM,
     });
   };
 
