@@ -102,11 +102,13 @@ android {
         // este fichero, que está versionado y el repo es público). debug y release firman con
         // la MISMA clave a propósito: permite instalar un build debuggable, restaurar datos por
         // `run-as`, e instalar release encima sin desinstalar (misma firma = update in-place).
+        // Sin esas variables (p.ej. un clon del repo) cae al debug.keystore versionado, para que
+        // `assembleDebug`/`assembleRelease` sigan compilando sin secretos.
         release {
-            storeFile file(WAYSTONE_RELEASE_STORE_FILE)
-            storePassword WAYSTONE_RELEASE_STORE_PASSWORD
-            keyAlias WAYSTONE_RELEASE_KEY_ALIAS
-            keyPassword WAYSTONE_RELEASE_KEY_PASSWORD
+            storeFile file(findProperty('WAYSTONE_RELEASE_STORE_FILE') ?: 'debug.keystore')
+            storePassword findProperty('WAYSTONE_RELEASE_STORE_PASSWORD') ?: 'android'
+            keyAlias findProperty('WAYSTONE_RELEASE_KEY_ALIAS') ?: 'androiddebugkey'
+            keyPassword findProperty('WAYSTONE_RELEASE_KEY_PASSWORD') ?: 'android'
         }
     }
     buildTypes {
