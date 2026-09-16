@@ -49,19 +49,19 @@ export const RUNES: readonly RuneDef[] = [
   {
     id: 'cinco-k',
     titulo: 'Cinco',
-    descripcion: 'Una carrera de 5 km o más.',
+    descripcion: 'Corre 5 km en una sola carrera.',
     trigger: (runs) => firstWith(runs, (r) => r.distanceM >= 5_000),
   },
   {
     id: 'diez-k',
     titulo: 'Diez',
-    descripcion: 'Una carrera de 10 km o más.',
+    descripcion: 'Corre 10 km en una sola carrera.',
     trigger: (runs) => firstWith(runs, (r) => r.distanceM >= 10_000),
   },
   {
     id: 'media-maraton',
     titulo: 'Media',
-    descripcion: 'Una carrera de media maratón (21,097 km).',
+    descripcion: 'Corre una media maratón.',
     trigger: (runs) => firstWith(runs, (r) => r.distanceM >= HALF_MARATHON_M),
   },
   {

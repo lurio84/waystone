@@ -88,7 +88,7 @@ const riverRun: RouteScenario = {
 // --- Ruta corta para iterar rápido ~800 m ---
 const quickTest: RouteScenario = {
   id: 'quick',
-  name: 'Test rápido (~800 m)',
+  name: 'Prueba rápida (~800 m)',
   description: 'Corta, para probar cambios deprisa. Sin eventos.',
   paceSPerKm: 300,
   jitterM: 2,

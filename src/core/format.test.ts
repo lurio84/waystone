@@ -26,7 +26,7 @@ describe('formatPace', () => {
 });
 
 describe('formatKm', () => {
-  it('2410 m → 2.41', () => {
-    expect(formatKm(2410)).toBe('2.41');
+  it('2410 m → 2,41', () => {
+    expect(formatKm(2410)).toBe('2,41');
   });
 });

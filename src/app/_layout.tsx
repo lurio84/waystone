@@ -65,7 +65,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ title: 'Waystone' }} />
           <Stack.Screen
             name="record"
-            options={{ title: 'Carrera', headerBackVisible: false, gestureEnabled: false }}
+            options={{ title: 'Grabando', headerBackVisible: false, gestureEnabled: false }}
           />
           <Stack.Screen name="runs" options={{ title: 'Historial' }} />
           <Stack.Screen name="run/[id]" options={{ title: 'Carrera' }} />

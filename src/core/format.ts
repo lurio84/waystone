@@ -20,9 +20,9 @@ export function formatPace(secondsPerKm: number): string {
   return `${mm}:${String(ss).padStart(2, '0')}`;
 }
 
-/** 2410 → "2.41". */
+/** 2410 → "2,41". */
 export function formatKm(meters: number): string {
-  return (meters / 1000).toFixed(2);
+  return (meters / 1000).toFixed(2).replace('.', ',');
 }
 
 /** epoch ms → "9 sep 2026, 18:40" (es-ES). */

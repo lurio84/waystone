@@ -141,7 +141,7 @@ export default function RunDetailScreen() {
                 value={run.distanceM}
                 format={(m) => {
                   'worklet';
-                  return (m / 1000).toFixed(2);
+                  return (m / 1000).toFixed(2).replace('.', ',');
                 }}
                 style={[styles.big, { color: theme.text }]}
               />
