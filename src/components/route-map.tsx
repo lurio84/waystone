@@ -1,14 +1,16 @@
 import {
   Camera,
+  type CameraRef,
   GeoJSONSource,
   Layer,
   LogManager,
   Map,
   Marker,
 } from '@maplibre/maplibre-react-native';
-import { useMemo } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { useMemo, useRef } from 'react';
+import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
+import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 
 // MapLibre es ruidoso en consola; solo errores de verdad.
@@ -21,6 +23,12 @@ LogManager.setLogLevel('error');
  */
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
 
+const FIT_PADDING = { top: 48, bottom: 48, left: 32, right: 32 };
+
+/** ¿Hay algún tramo con al menos 2 puntos, o sea, una línea que dibujar? */
+export const hasRoute = (segments: { lat: number; lon: number }[][]) =>
+  segments.some((seg) => seg.length >= 2);
+
 export interface RouteMapProps {
   /**
    * La traza partida en tramos continuos (ver `routeSegments` en
@@ -31,11 +39,17 @@ export interface RouteMapProps {
   segments: { lat: number; lon: number }[][];
   /** modo en vivo: la cámara sigue al último punto en vez de encuadrar la ruta */
   follow?: boolean;
+  /**
+   * `false` = vista previa inerte: sin pan ni zoom, para que el toque lo
+   * reciba el padre (scroll de la pantalla o el botón que abre el mapa grande).
+   */
+  interactive?: boolean;
   style?: ViewStyle;
 }
 
-export function RouteMap({ segments, follow = false, style }: RouteMapProps) {
+export function RouteMap({ segments, follow = false, interactive = true, style }: RouteMapProps) {
   const theme = useTheme();
+  const cameraRef = useRef<CameraRef>(null);
 
   const coordSegments = useMemo(
     () => segments.map((seg) => seg.map((p) => [p.lon, p.lat] as [number, number])),
@@ -86,16 +100,25 @@ export function RouteMap({ segments, follow = false, style }: RouteMapProps) {
 
   return (
     <View style={[styles.wrap, style]}>
-      <Map mapStyle={STYLE_URL} style={StyleSheet.absoluteFill} logo={false} compass={false}>
+      {/* Sin rotación ni inclinación: en un mapa de ruta solo estorban (un
+          pellizco torcido giraba el mapa y sin brújula no había vuelta al norte). */}
+      <Map
+        mapStyle={STYLE_URL}
+        style={StyleSheet.absoluteFill}
+        logo={false}
+        compass={false}
+        touchRotate={false}
+        touchPitch={false}
+        dragPan={interactive}
+        touchZoom={interactive}
+        doubleTapZoom={interactive}
+        doubleTapHoldZoom={interactive}
+      >
         {follow ? (
           <Camera center={last} zoom={15.5} easing="ease" duration={500} />
         ) : (
           bounds && (
-            <Camera
-              bounds={bounds}
-              padding={{ top: 48, bottom: 48, left: 32, right: 32 }}
-              duration={0}
-            />
+            <Camera ref={cameraRef} bounds={bounds} padding={FIT_PADDING} duration={0} />
           )
         )}
 
@@ -121,11 +144,36 @@ export function RouteMap({ segments, follow = false, style }: RouteMapProps) {
           </Marker>
         )}
       </Map>
+
+      {interactive && !follow && bounds && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Recentrar la ruta"
+          hitSlop={12}
+          onPress={() => {
+            // el nativo lanza si el mapa aún no ha terminado de montar
+            try {
+              cameraRef.current?.fitBounds(bounds, {
+                padding: FIT_PADDING,
+                duration: 300,
+                easing: 'ease',
+              });
+            } catch {}
+          }}
+          style={[styles.recenter, { backgroundColor: theme.backgroundElement }]}
+        >
+          <ThemedText type="inscription" themeColor="textSecondary" style={styles.recenterText}>
+            Recentrar
+          </ThemedText>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { overflow: 'hidden' },
+  recenter: { position: 'absolute', left: 8, bottom: 8, paddingVertical: 6 },
+  recenterText: { paddingHorizontal: 12 },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
 });

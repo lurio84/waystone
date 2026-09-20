@@ -95,7 +95,7 @@ export default function RecordScreen() {
         )}
 
         {liveMap && (
-          <RouteMap segments={metrics.segments} follow style={styles.map} />
+          <RouteMap segments={metrics.segments} follow interactive={false} style={styles.map} />
         )}
 
         <View style={styles.main}>
