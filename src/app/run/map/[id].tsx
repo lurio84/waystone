@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { RouteMap } from '@/components/route-map';
 import { ThemedText } from '@/components/themed-text';
@@ -26,11 +27,13 @@ export default function RunMapScreen() {
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: run ? formatDateTime(run.startedAt) : 'Ruta' }} />
-      {route.flat().length >= 2 ? (
-        <RouteMap segments={route} style={styles.map} />
-      ) : (
-        <ThemedText style={styles.empty}>Esta carrera no tiene ruta que mostrar.</ThemedText>
-      )}
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        {route.flat().length >= 2 ? (
+          <RouteMap segments={route} style={styles.map} />
+        ) : (
+          <ThemedText style={styles.empty}>Esta carrera no tiene ruta que mostrar.</ThemedText>
+        )}
+      </SafeAreaView>
     </ThemedView>
   );
 }

@@ -159,7 +159,7 @@ export function RouteMap({ segments, follow = false, interactive = true, style }
 
 const styles = StyleSheet.create({
   wrap: { overflow: 'hidden' },
-  recenter: { position: 'absolute', right: 8, bottom: 8, paddingVertical: 6 },
+  recenter: { position: 'absolute', left: 8, bottom: 8, paddingVertical: 6 },
   recenterText: { paddingHorizontal: 12 },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
 });

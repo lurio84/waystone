@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.two },
   map: { height: 260, marginVertical: Spacing.two },
-  expand: { position: 'absolute', right: 8, bottom: 16, paddingHorizontal: 12 },
+  expand: { position: 'absolute', right: 8, top: 16, paddingHorizontal: 12 },
   runeBanner: { gap: Spacing.two, marginTop: Spacing.two },
   runeBannerTitle: { fontSize: 13, letterSpacing: 3 },
   runeItem: { gap: Spacing.half },
