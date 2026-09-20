@@ -25,6 +25,10 @@ const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
 
 const FIT_PADDING = { top: 48, bottom: 48, left: 32, right: 32 };
 
+/** ¿Hay algún tramo con al menos 2 puntos, o sea, una línea que dibujar? */
+export const hasRoute = (segments: { lat: number; lon: number }[][]) =>
+  segments.some((seg) => seg.length >= 2);
+
 export interface RouteMapProps {
   /**
    * La traza partida en tramos continuos (ver `routeSegments` en
@@ -145,7 +149,17 @@ export function RouteMap({ segments, follow = false, interactive = true, style }
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Recentrar la ruta"
-          onPress={() => cameraRef.current?.fitBounds(bounds, { padding: FIT_PADDING, duration: 300 })}
+          hitSlop={12}
+          onPress={() => {
+            // el nativo lanza si el mapa aún no ha terminado de montar
+            try {
+              cameraRef.current?.fitBounds(bounds, {
+                padding: FIT_PADDING,
+                duration: 300,
+                easing: 'ease',
+              });
+            } catch {}
+          }}
           style={[styles.recenter, { backgroundColor: theme.backgroundElement }]}
         >
           <ThemedText type="inscription" themeColor="textSecondary" style={styles.recenterText}>

@@ -3,9 +3,10 @@ import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { RouteMap } from '@/components/route-map';
+import { hasRoute, RouteMap } from '@/components/route-map';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Spacing } from '@/constants/theme';
 import { formatDateTime } from '@/core/format';
 import { routeSegments } from '@/core/metrics';
 import { getEvents, getPoints, getRun } from '@/db/runs';
@@ -24,11 +25,19 @@ export default function RunMapScreen() {
     [runId, run?.startedAt, run?.endedAt],
   );
 
+  if (!run) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText style={styles.empty}>Carrera no encontrada.</ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
-      <Stack.Screen options={{ title: run ? formatDateTime(run.startedAt) : 'Ruta' }} />
+      <Stack.Screen options={{ title: formatDateTime(run.startedAt) }} />
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        {route.flat().length >= 2 ? (
+        {hasRoute(route) ? (
           <RouteMap segments={route} style={styles.map} />
         ) : (
           <ThemedText style={styles.empty}>Esta carrera no tiene ruta que mostrar.</ThemedText>
@@ -41,5 +50,5 @@ export default function RunMapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
-  empty: { padding: 16 },
+  empty: { padding: Spacing.three },
 });

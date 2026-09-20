@@ -5,7 +5,7 @@ import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedNumber } from '@/components/animated-number';
-import { RouteMap } from '@/components/route-map';
+import { hasRoute, RouteMap } from '@/components/route-map';
 import { StonePanel } from '@/components/stone-panel';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -133,17 +133,21 @@ export default function RunDetailScreen() {
             </Animated.View>
           )}
 
-          {route.flat().length >= 2 && (
+          {hasRoute(route) && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Ampliar el mapa"
               onPress={() => router.push(`/run/map/${runId}`)}
             >
               {/* la vista previa no captura gestos: el toque llega al Pressable */}
-              <View pointerEvents="none">
+              <View pointerEvents="none" importantForAccessibility="no-hide-descendants">
                 <RouteMap segments={route} interactive={false} style={styles.map} />
               </View>
-              <ThemedText type="inscription" themeColor="textSecondary" style={styles.expand}>
+              <ThemedText
+                type="inscription"
+                themeColor="textSecondary"
+                style={[styles.expand, { backgroundColor: theme.backgroundElement }]}
+              >
                 Ampliar
               </ThemedText>
             </Pressable>
@@ -244,7 +248,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.two },
   map: { height: 260, marginVertical: Spacing.two },
-  expand: { position: 'absolute', right: 8, top: 16, paddingHorizontal: 12 },
+  expand: { position: 'absolute', right: 8, top: 16, paddingHorizontal: 12, paddingVertical: 6 },
   runeBanner: { gap: Spacing.two, marginTop: Spacing.two },
   runeBannerTitle: { fontSize: 13, letterSpacing: 3 },
   runeItem: { gap: Spacing.half },
