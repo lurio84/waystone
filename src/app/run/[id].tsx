@@ -133,7 +133,21 @@ export default function RunDetailScreen() {
             </Animated.View>
           )}
 
-          <RouteMap segments={route} style={styles.map} />
+          {route.flat().length >= 2 && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ampliar el mapa"
+              onPress={() => router.push(`/run/map/${runId}`)}
+            >
+              {/* la vista previa no captura gestos: el toque llega al Pressable */}
+              <View pointerEvents="none">
+                <RouteMap segments={route} interactive={false} style={styles.map} />
+              </View>
+              <ThemedText type="inscription" themeColor="textSecondary" style={styles.expand}>
+                Ampliar
+              </ThemedText>
+            </Pressable>
+          )}
 
           <StonePanel style={styles.summary}>
             <View style={styles.headline}>
@@ -230,6 +244,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { padding: Spacing.three, gap: Spacing.two },
   map: { height: 260, marginVertical: Spacing.two },
+  expand: { position: 'absolute', right: 8, bottom: 16, paddingHorizontal: 12 },
   runeBanner: { gap: Spacing.two, marginTop: Spacing.two },
   runeBannerTitle: { fontSize: 13, letterSpacing: 3 },
   runeItem: { gap: Spacing.half },
