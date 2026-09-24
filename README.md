@@ -39,10 +39,20 @@ reconstruir sin haber perdido nada.
 - Las **pausas manuales** sí son hechos: se guardan como eventos (`run_events`).
 - Los **logros** ("runas") también son hechos: se escriben una vez en
   `achievements` y no se recalculan nunca, aunque la caché que los disparó cambie.
-- El **desnivel** se calcula sobre la altitud del GPS, que sin corrección contra un
-  modelo de elevación (DEM) sobreestima bastante en terreno llano. Se muestra con
-  `≈` y es orientativo; distancia y ritmo, que van sobre la posición horizontal, sí
-  son fiables.
+- El **desnivel** se corrige contra un modelo de elevación (Open-Meteo/Copernicus
+  GLO-90, gratis y sin API key): se pide una vez al terminar la carrera (o al
+  reabrir el detalle si no había red) y se persiste como un hecho. Se muestra con
+  `≈` porque solo está calibrado en terreno llano u ondulado, no en cuestas fuertes;
+  distancia y ritmo, que van sobre la posición horizontal, sí son fiables sin más.
+
+## Limitaciones conocidas
+
+- El **mini-mapa en vivo** durante la carrera es un ajuste opcional, apagado por
+  defecto, y no se ha probado todavía en una carrera real.
+- Si no hay red al cargar el mapa, cae al estilo oscuro de OpenFreeMap **sin
+  parchear** (menos contraste); ese caso no se ha probado a propósito.
+- La corrección de desnivel por DEM está validada en rutas llanas y onduladas;
+  falta confirmar la precisión en rutas con cuestas fuertes.
 
 ## Stack
 
